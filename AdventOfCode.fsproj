@@ -1,0 +1,66 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="Tools.fsx" />
+    <Content Include="Input\2021\day01.txt" />
+    <Content Include="Input\2021\day01_sample.txt" />
+    <Content Include="Input\2021\day01_sample2.txt" />
+    <Content Include="Input\2021\day02.txt" />
+    <Content Include="Input\2021\day02_sample1.txt" />
+    <Content Include="Input\2021\day03.txt" />
+    <Content Include="Input\2021\day03_sample1.txt" />
+    <Content Include="Input\2021\day04.txt" />
+    <Content Include="Input\2021\day04_sample1.txt" />
+    <Content Include="Input\2021\day05.txt" />
+    <Content Include="Input\2021\day05_sample1.txt" />
+    <Content Include="Input\2021\day06.txt" />
+    <Content Include="Input\2021\day06_sample1.txt" />
+    <Content Include="Input\2021\day07.txt" />
+    <Content Include="Input\2021\day07_sample1.txt" />
+    <Content Include="Input\2021\day08.txt" />
+    <Content Include="Input\2021\day08_sample1.txt" />
+    <Content Include="Input\2021\day08_sample2.txt" />
+    <Content Include="Input\2021\day08_sample3.txt" />
+    <Content Include="Input\2021\day09.txt" />
+    <Content Include="Input\2021\day09_sample1.txt" />
+    <Content Include="Input\2021\day10.txt" />
+    <Content Include="Input\2021\day10_sample1.txt" />
+    <Content Include="Input\2021\day11.txt" />
+    <Content Include="Input\2021\day11_sample1.txt" />
+    <Content Include="Input\2021\day12.txt" />
+    <Content Include="Input\2021\day12_sample1.txt" />
+    <Content Include="Input\2021\day12_sample2.txt" />
+    <Content Include="Input\2021\day12_sample3.txt" />
+    <Content Include="Input\2021\day13.txt" />
+    <Content Include="Input\2021\day13_sample1.txt" />
+    <Content Include="Input\2021\day14.txt" />
+    <Content Include="Input\2021\day14_sample1.txt" />
+    <Content Include="Input\2021\day15.txt" />
+    <Content Include="Input\2021\day15_sample1.txt" />
+    <Compile Include="Program.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Puzzles\2021\Day01.fsx" />
+    <None Include="Puzzles\2021\Day02.fsx" />
+    <None Include="Puzzles\2021\Day03.fsx" />
+    <None Include="Puzzles\2021\Day04.fsx" />
+    <None Include="Puzzles\2021\Day05.fsx" />
+    <None Include="Puzzles\2021\Day06.fsx" />
+    <None Include="Puzzles\2021\Day07.fsx" />
+    <None Include="Puzzles\2021\Day08.fsx" />
+    <None Include="Puzzles\2021\Day09.fsx" />
+    <None Include="Puzzles\2021\Day10.fsx" />
+    <None Include="Puzzles\2021\Day11.fsx" />
+    <None Include="Puzzles\2021\Day12.fsx" />
+    <None Include="Puzzles\2021\Day13.fsx" />
+    <None Include="Puzzles\2021\Day14.fsx" />
+    <None Include="Puzzles\2021\Day15.fsx" />
+  </ItemGroup>
+
+</Project>
