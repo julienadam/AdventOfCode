@@ -46,6 +46,43 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="Puzzles\2020\day01.linq" />
+    <None Include="Puzzles\2020\day02.linq" />
+    <None Include="Puzzles\2020\day03.linq" />
+    <None Include="Puzzles\2020\day04.linq" />
+    <None Include="Puzzles\2020\day05.linq" />
+    <None Include="Puzzles\2020\day06.linq" />
+    <None Include="Puzzles\2020\day07.linq" />
+    <None Include="Puzzles\2020\day08.linq" />
+    <None Include="Puzzles\2020\day09.linq" />
+    <None Include="Puzzles\2020\day10.linq" />
+    <None Include="Puzzles\2020\day11.linq" />
+    <None Include="Puzzles\2020\day12.linq" />
+    <None Include="Puzzles\2020\day13.linq" />
+    <None Include="Puzzles\2020\day13_crt.linq" />
+    <None Include="Puzzles\2020\day14.linq" />
+    <None Include="Puzzles\2020\day15.linq" />
+    <None Include="Puzzles\2020\day16.linq" />
+    <None Include="Puzzles\2020\day17.linq" />
+    <None Include="Puzzles\2020\day18.linq" />
+    <None Include="Puzzles\2020\day19.linq" />
+    <None Include="Puzzles\2020\day20.linq" />
+    <None Include="Puzzles\2020\day21.linq" />
+    <None Include="Puzzles\2020\day22.linq" />
+    <None Include="Puzzles\2020\day23.linq" />
+    <None Include="Puzzles\2020\day24.linq" />
+    <None Include="Puzzles\2020\day25.linq" />
+    <None Include="Puzzles\2016\day1.linq" />
+    <None Include="Puzzles\2016\day10.linq" />
+    <None Include="Puzzles\2016\day11.linq" />
+    <None Include="Puzzles\2016\day2.linq" />
+    <None Include="Puzzles\2016\day3.linq" />
+    <None Include="Puzzles\2016\day4.linq" />
+    <None Include="Puzzles\2016\day5.linq" />
+    <None Include="Puzzles\2016\day6.linq" />
+    <None Include="Puzzles\2016\day7.linq" />
+    <None Include="Puzzles\2016\day8.linq" />
+    <None Include="Puzzles\2016\day9.linq" />
     <None Include="Puzzles\2021\Day01.fsx" />
     <None Include="Puzzles\2021\Day02.fsx" />
     <None Include="Puzzles\2021\Day03.fsx" />
