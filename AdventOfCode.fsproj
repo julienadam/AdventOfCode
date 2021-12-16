@@ -6,7 +6,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include=".gitignore" />
     <None Include="Tools.fsx" />
+    <Content Include="Input\2021\day16.txt" />
     <Content Include="Input\2021\day01.txt" />
     <Content Include="Input\2021\day01_sample.txt" />
     <Content Include="Input\2021\day01_sample2.txt" />
@@ -98,6 +100,7 @@
     <None Include="Puzzles\2021\Day13.fsx" />
     <None Include="Puzzles\2021\Day14.fsx" />
     <None Include="Puzzles\2021\Day15.fsx" />
+    <None Include="Puzzles\2021\Day16.fsx" />
   </ItemGroup>
 
 </Project>
