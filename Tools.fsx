@@ -7,6 +7,10 @@ let Dump obj =
     printfn "%A" obj
     obj
 
+module SeqEx =
+    let read n s =
+        s |> Seq.take n, s |> Seq.skip n
+
 [<AutoOpen>]
 module Distance =
     let manhattanDistance (x1:int) (y1:int) (x2:int) (y2:int) = Math.Abs(x1 - x2) + Math.Abs(y1 - y2)

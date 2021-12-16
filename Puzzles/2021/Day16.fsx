@@ -4,7 +4,6 @@
 
 open Tools
 open System.IO
-open Tools.Array2DTools
 
 let bitsToNumber bits =
     bits 
@@ -200,19 +199,19 @@ module Part2 =
                     printf "%sGreater than of %A" prefix subValues
                     match subValues with
                     | [a;b] when a > b -> 1L
-                    | [a;b] -> 0L
+                    | [_;_] -> 0L
                     | _ -> failwith "Invalid number of subpackets for >"
                 | 6L -> // Less than
                     printf "%sLess than than of %A" prefix subValues
                     match subValues with
                     | [a;b] when a < b -> 1L
-                    | [a;b] -> 0L
+                    | [_;_] -> 0L
                     | _ -> failwith "Invalid number of subpackets for <"
                 | 7L -> // Equal to
                     printf "%sEqual to of%A" prefix subValues
                     match subValues with
                     | [a;b] when a = b -> 1L
-                    | [a;b] -> 0L
+                    | [_;_] -> 0L
                     | _ -> failwith "Invalid number of subpackets for ="
                 | _ -> failwithf "Operator not implemented %i" op
             
