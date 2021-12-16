@@ -8,7 +8,6 @@
   <ItemGroup>
     <None Include=".gitignore" />
     <None Include="Tools.fsx" />
-    <Content Include="Input\2021\day16.txt" />
     <Content Include="Input\2021\day01.txt" />
     <Content Include="Input\2021\day01_sample.txt" />
     <Content Include="Input\2021\day01_sample2.txt" />
@@ -44,6 +43,7 @@
     <Content Include="Input\2021\day14_sample1.txt" />
     <Content Include="Input\2021\day15.txt" />
     <Content Include="Input\2021\day15_sample1.txt" />
+    <Content Include="Input\2021\day16.txt" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
