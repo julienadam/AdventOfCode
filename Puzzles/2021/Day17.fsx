@@ -12,7 +12,6 @@ type Range = {
 }
 with
     member this.IsInRange x = x >= this.Start && x <= this.End
-    
 
 let calcXi startX startXvel iteration =
     startX + ([(max 0 (startXvel - iteration + 2)) ..startXvel] |> Seq.sum)
@@ -21,25 +20,34 @@ let calcYi startY startYvel iteration =
     startY + (iteration - 1) * startYvel - ([1..iteration - 2] |> Seq.sum)
 
 let hitsTarget xVel yVel (xRange:Range) (yRange:Range) =
-    //printfn "Verifying xVel %i yVel %i" xVel yVel
     let mutable m = yRange.Start
     Seq.initInfinite id |> Seq.pick (fun iteration ->
         let x,y = calcXi 0 xVel iteration, calcYi 0 yVel iteration
         m <- max y m
         if xRange.IsInRange x && yRange.IsInRange y then
-            //printfn "Hit at iteration %i" iteration
-            // Hit
             Some (Some m)
         else if x > xRange.End || y < yRange.Start then
-            //printfn "Overshoot at iteration %i" iteration
-            // Overshoot
             Some (None)
         else
             None
     )
+
+let hitsTargetNoMax xVel yVel (xRange:Range) (yRange:Range) =
+    Seq.initInfinite id |> Seq.pick (fun iteration ->
+        let x,y = calcXi 0 xVel iteration, calcYi 0 yVel iteration
+        if xRange.IsInRange x && yRange.IsInRange y then
+            Some true
+        else if x > xRange.End || y < yRange.Start then
+            Some false
+        else
+            None
+    )
      
+let inverseTriangularNumber x =
+    ((x * 2.0) ** 0.5) |> int
+
 let enumVelocities (xRange:Range) (yRange:Range) = seq {
-    for x = 1 to xRange.End do
+    for x = (inverseTriangularNumber xRange.Start) to xRange.End do
         for y = yRange.Start to Math.Abs(yRange.Start) do
             yield x, y
 }
@@ -63,9 +71,7 @@ module Part2 =
         let sw = Stopwatch.StartNew()
         let numSolutions = 
             enumVelocities xRange yRange
-            |> Seq.choose (fun (xVel,yVel) -> 
-                hitsTarget xVel yVel xRange yRange 
-                |> Option.map (fun m -> xVel,yVel, m))
+            |> Seq.filter (fun (xVel,yVel) -> hitsTargetNoMax xVel yVel xRange yRange)
             |> Seq.length
         printfn "%i solutions. Tooks %O" numSolutions sw.Elapsed
 
