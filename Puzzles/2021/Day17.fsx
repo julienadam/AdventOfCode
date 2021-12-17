@@ -40,52 +40,42 @@ let hitsTarget xVel yVel (xRange:Range) (yRange:Range) =
      
 let enumVelocities (xRange:Range) (yRange:Range) = seq {
     for x = 1 to xRange.End do
-        // Arbitrary Y max. Maths should tell us what to expect
-        // I just brute force the whole thing
-        // Basically when xVel is 0 there should be an easy math way to determine
-        // if there is an iteration where a hit occurs
-        // Because the function becomes simpler
-        for y = yRange.Start to 100000 do
+        for y = yRange.Start to Math.Abs(yRange.Start) do
             yield x, y
 }
 
 module Part1 =
 
     let Solve xRange yRange = 
-        // increment iterations
-        enumVelocities xRange yRange
-        |> Seq.choose (fun (xVel,yVel) -> 
-            hitsTarget xVel yVel xRange yRange 
-            |> Option.map (fun m -> 
-                printfn "(%i,%i) hits" xVel yVel
-                xVel,yVel, m))
-        |> Seq.maxBy (fun (xVel,yVel, m) -> m)
-        |> Dump
+        let sw = Stopwatch.StartNew()
+        let xVelMax, yVelMax, maxY = 
+            enumVelocities xRange yRange
+            |> Seq.choose (fun (xVel,yVel) -> 
+                hitsTarget xVel yVel xRange yRange 
+                |> Option.map (fun m -> xVel,yVel, m))
+            |> Seq.maxBy (fun (_, _, m) -> m)
         
-
+        printfn "Best shot for %i %i, reached %i. Tooks %O" xVelMax yVelMax maxY sw.Elapsed
+        
 module Part2 =
     
     let Solve xRange yRange = 
-        // increment iterations
-        enumVelocities xRange yRange
-        |> Seq.choose (fun (xVel,yVel) -> 
-            hitsTarget xVel yVel xRange yRange 
-            |> Option.map (fun m -> 
-                printfn "(%i,%i) hits" xVel yVel
-                xVel,yVel, m))
-        |> Seq.length
+        let sw = Stopwatch.StartNew()
+        let numSolutions = 
+            enumVelocities xRange yRange
+            |> Seq.choose (fun (xVel,yVel) -> 
+                hitsTarget xVel yVel xRange yRange 
+                |> Option.map (fun m -> xVel,yVel, m))
+            |> Seq.length
+        printfn "%i solutions. Tooks %O" numSolutions sw.Elapsed
 
 assert(hitsTarget 7 2 { Start = 20 ; End = 30 } { Start = -10; End = -5 } |> Option.isSome)
 assert(hitsTarget 6 3 { Start = 20 ; End = 30 } { Start = -10; End = -5 } |> Option.isSome)
 assert(hitsTarget 9 0 { Start = 20 ; End = 30 } { Start = -10; End = -5 } |> Option.isSome)
 assert(hitsTarget 17 -4 { Start = 20 ; End = 30 } { Start = -10; End = -5 } |> Option.isNone)
 
-//Part1.calcYi 0 -10 1
-//Part1.calcYi 0 -10 2
-//Part1.calcYi 0 -10 3
+Part1.Solve { Start = 20 ; End = 30 } { Start = -10; End = -5 }
+Part1.Solve { Start = 281 ; End = 311 } { Start = -74; End = -54 }
 
-//Part1.Solve { Start = 20 ; End = 30 } { Start = -10; End = -5 }
-//Part1.Solve { Start = 281 ; End = 311 } { Start = -74; End = -54 }
-
-//Part2.Solve { Start = 20 ; End = 30 } { Start = -10; End = -5 }
+Part2.Solve { Start = 20 ; End = 30 } { Start = -10; End = -5 }
 Part2.Solve { Start = 281 ; End = 311 } { Start = -74; End = -54 }
