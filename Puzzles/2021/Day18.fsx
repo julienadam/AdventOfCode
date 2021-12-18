@@ -33,29 +33,8 @@ and SailFishNumber = {
     Value : int
 }
 
-
-let regex = new Regex("^\[(\d),(\d)\]")
-let tryPair input =
-    let m = regex.Match(input)
-    if m.Success then
-        (m.Groups.[1].Value |> int, m.Groups.[2].Value |> int) |> Some
-    else
-        None
-
 let rec readRec input parent : Node * string=
     printfn "Entering %s" input
-    
-    //match tryPair input with
-    //| Some (l,r) ->
-    //    printfn "Leaf node %s" (input.Substring(0,5))
-    //    let node = { Left = LeafNode { Value = l; Parent = None}; Right = LeafNode { Value = r; Parent = None}; Parent = parent}
-    //    node.Left.SetParent (Some node)
-    //    node.Right.SetParent (Some node)
-    //    if input.Length > 5 then
-    //        BranchNode node, input.Substring(5)
-    //    else
-    //        BranchNode node, ""
-    //| None ->
     match input.[0] with
     | '[' ->
         let left, afterLeft = readRec (input.Substring(1)) None
@@ -86,3 +65,4 @@ read "[[1,9],[8,5]]" |> Dump
 read "[[[[1,2],[3,4]],[[5,6],[7,8]]],9]" |> Dump
 read "[[[9,[3,8]],[[0,9],6]],[[[3,7],[4,9]],3]]" |> Dump
 read "[[[[1,3],[5,3]],[[1,3],[8,7]]],[[[4,9],[6,9]],[[8,2],[7,3]]]]" |> Dump
+
