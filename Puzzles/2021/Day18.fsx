@@ -1,18 +1,10 @@
 ﻿open System.Diagnostics
-open System.Text.RegularExpressions
 open System
 
 #load "../../Tools.fsx"
 
 open Tools
 open System.IO
-
-//[[1,2],3]
-//[9,[8,7]]
-//[[1,9],[8,5]]
-//[[[[1,2],[3,4]],[[5,6],[7,8]]],9]
-//[[[9,[3,8]],[[0,9],6]],[[[3,7],[4,9]],3]]
-//[[[[1,3],[5,3]],[[1,3],[8,7]]],[[[4,9],[6,9]],[[8,2],[7,3]]]]
 
 type Node = {
     mutable Parent: Node option
@@ -34,7 +26,6 @@ and NodeValue =
 | Branch of Node * Node
 | Leaf of int
 
-// printfn "Entering %s" input
 let mutable intGen = 0
 
 let getId () =
@@ -93,13 +84,6 @@ let rec depthFirst (n:Node) = seq {
         yield! depthFirst r
 }
 
-//[[1,2],3]
-//[9,[8,7]]
-//[[1,9],[8,5]]
-//[[[[1,2],[3,4]],[[5,6],[7,8]]],9]
-//[[[9,[3,8]],[[0,9],6]],[[[3,7],[4,9]],3]]
-//[[[[1,3],[5,3]],[[1,3],[8,7]]],[[[4,9],[6,9]],[[8,2],[7,3]]]]
-
 (read "[1,2]").Display()
 (read "[9,[8,7]]").Display()
 (read "[[1,9],[8,5]]").Display()
@@ -107,42 +91,11 @@ let rec depthFirst (n:Node) = seq {
 (read "[[[9,[3,8]],[[0,9],6]],[[[3,7],[4,9]],3]]").Display()
 (read "[[[[1,3],[5,3]],[[1,3],[8,7]]],[[[4,9],[6,9]],[[8,2],[7,3]]]]").Display()
 
-// [[[[[9,8],1],2],3],4] -> [[[[0,9],2],3],4]
-(*
-
-
-To explode a pair, the pair's left value is added to the first regular number to the left of the 
-exploding pair (if any), and the pair's right value is added to the first regular number to the right 
-of the exploding pair (if any). Exploding pairs will always consist of two regular numbers. 
-
-Then, the entire exploding pair is replaced with the regular number 0.
-*)
 let explode (rootNode: Node) (node:Node) =
-    //let rec getNumberToTheRight (n:Node) = 
-    //    match n.Parent with
-    //    | Some p ->
-    //        match p.Value with
-    //        | Branch (_,r) ->
-    //            match r.Value with
-    //            | Leaf leafValue -> Some r
-    //            | _ -> getNumberToTheRight p
-    //        | _ -> failwithf "Should never have a leaf parent node"
-    //    | None -> None
-
-    //let rec getNumberToTheLeft (n:Node) = 
-    //    match n.Parent with
-    //    | Some p ->
-    //        match p.Value with
-    //        | Branch (l,_) ->
-    //            match l.Value with
-    //            | Leaf leafValue -> Some l
-    //            | _ -> getNumberToTheLeft p
-    //        | _ -> failwithf "Should never have a leaf parent node"
-    //    | None -> None
 
     let allLeafNodes = depthFirst rootNode |> Seq.toList
-    allLeafNodes |> Seq.iter (fun n -> match n.Value with | Leaf v -> printfn "%i " v)
-    printfn ""
+    //allLeafNodes |> Seq.iter (fun n -> match n.Value with | Leaf v -> printfn "%i " v)
+    //printfn ""
 
     // update left and right
     match node.Value with
@@ -158,19 +111,7 @@ let explode (rootNode: Node) (node:Node) =
         | _ -> failwithf "Explosion on non regular number"
     | Leaf _ -> 
         failwithf "Explosion on leaf"
-//        if right.IsSome then
-    //            addValue right.Value r
-    //        let left = getNumberToTheLeft node
-    //        if left.IsSome then
-    //            addValue left.Value l
-    //        ()
-    //    | _ ->
-    //        printfn "%s" (node.Display())
-    //        failwithf "Explosion on non regular number"
-    //| Leaf _ -> 
-    //    failwithf "Explosion on leaf"
 
-    
     // replace with 0
     match node.Parent with
     | Some p ->
@@ -207,8 +148,7 @@ let split (n:Node) =
     let newNodeValue = Branch (left, right)
     n.Value <- newNodeValue
 
-let x = "[9,1]" |> read
+let x = "[8,1]" |> read
 addValue (x |> left) 1
 split (x |> left)
 x.Display()
-
