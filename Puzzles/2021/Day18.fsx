@@ -197,3 +197,18 @@ assertExplosion ("[7,[6,[5,[4,[3,2]]]]]" |> read) (right >> right >> right >> ri
 assertExplosion ("[[6,[5,[4,[3,2]]]],1]" |> read) (left >> right >> right >> right) "[[6,[5,[7,0]]],3]"
 assertExplosion ("[[3,[2,[8,0]]],[9,[5,[4,[3,2]]]]]" |> read) (right >> right >> right >> right) "[[3,[2,[8,0]]],[9,[5,[7,0]]]]"
 assertExplosion ("[[3,[2,[1,[7,3]]]],[6,[5,[4,[3,2]]]]]" |> read) (left >> right >> right >> right) "[[3,[2,[8,0]]],[9,[5,[4,[3,2]]]]]"
+
+let split (n:Node) =
+    let value = n |> leaf
+    let vl = Math.Floor ((value |> double) / 2.0) |> int
+    let vr = Math.Ceiling ((value |> double) / 2.0) |> int
+    let left = { Parent = Some n; Id = getId(); Value = Leaf vl }
+    let right = { Parent = Some n; Id = getId(); Value = Leaf vr }
+    let newNodeValue = Branch (left, right)
+    n.Value <- newNodeValue
+
+let x = "[9,1]" |> read
+addValue (x |> left) 1
+split (x |> left)
+x.Display()
+
