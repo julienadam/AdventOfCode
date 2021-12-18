@@ -152,3 +152,13 @@ let x = "[8,1]" |> read
 addValue (x |> left) 1
 split (x |> left)
 x.Display()
+
+let add n1 n2 =
+    let result = { Parent = None; Value = Branch (n1, n2); Id = getId() }
+    n1.SetParent result
+    n2.SetParent result
+    result
+
+let r = add ("[5,4]" |> read) ("[3,2]" |> read)
+r.Display()
+
