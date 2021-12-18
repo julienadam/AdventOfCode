@@ -26,15 +26,10 @@ with
         let rec displayRec (n: Node) =
             match n.Value with
             | Branch (l, r) ->
-                printf "["
-                displayRec l
-                printf ","
-                displayRec r
-                printf "]"
+                sprintf "[%s,%s]" (displayRec l) (displayRec r)
             | Leaf v ->
-                printf "%i" v
+                sprintf "%i" v
         displayRec this
-        printfn ""
 and NodeValue =
 | Branch of Node * Node
 | Leaf of int
@@ -90,6 +85,13 @@ let addValue (n:Node) v =
     | Leaf e -> n.Value <- Leaf (e + v)
     | _ -> failwithf "Not a branch node"
 
+let rec depthFirst (n:Node) = seq {
+    match n.Value with 
+    | Leaf _ -> yield n
+    | Branch (l,r) -> 
+        yield! depthFirst l
+        yield! depthFirst r
+}
 
 //[[1,2],3]
 //[9,[8,7]]
@@ -115,48 +117,60 @@ of the exploding pair (if any). Exploding pairs will always consist of two regul
 
 Then, the entire exploding pair is replaced with the regular number 0.
 *)
-let explode (node:Node) =
-    let rec getNumberToTheLeft (n:Node) = 
-        match n.Parent with
-        | Some n ->
-            match n.Value with
-            | Branch (_,r) ->
-                match r.Value with
-                | Leaf leafValue -> Some r
-                | _ -> getNumberToTheLeft n
-            | _ -> failwithf "Should never have a leaf parent node"
-        | None -> None
+let explode (rootNode: Node) (node:Node) =
+    //let rec getNumberToTheRight (n:Node) = 
+    //    match n.Parent with
+    //    | Some p ->
+    //        match p.Value with
+    //        | Branch (_,r) ->
+    //            match r.Value with
+    //            | Leaf leafValue -> Some r
+    //            | _ -> getNumberToTheRight p
+    //        | _ -> failwithf "Should never have a leaf parent node"
+    //    | None -> None
 
-    let rec getNumberToTheRight (n:Node) = 
-        match n.Parent with
-        | Some n ->
-            match n.Value with
-            | Branch (l,_) ->
-                match l.Value with
-                | Leaf leafValue -> Some l
-                | _ -> getNumberToTheRight n
-            | _ -> failwithf "Should never have a leaf parent node"
-        | None -> None
+    //let rec getNumberToTheLeft (n:Node) = 
+    //    match n.Parent with
+    //    | Some p ->
+    //        match p.Value with
+    //        | Branch (l,_) ->
+    //            match l.Value with
+    //            | Leaf leafValue -> Some l
+    //            | _ -> getNumberToTheLeft p
+    //        | _ -> failwithf "Should never have a leaf parent node"
+    //    | None -> None
+
+    let allLeafNodes = depthFirst rootNode |> Seq.toList
+    allLeafNodes |> Seq.iter (fun n -> match n.Value with | Leaf v -> printfn "%i " v)
+    printfn ""
 
     // update left and right
     match node.Value with
     | Branch (l,r) ->
-        match l.Value, l.Value with
-        | Leaf l, Leaf r -> 
-            if node.Parent.IsSome then
-                let right = getNumberToTheRight node
-                if right.IsSome then
-                    addValue right.Value l
-                let left = getNumberToTheLeft node
-                if left.IsSome then
-                    addValue left.Value l
-            ()
-        | _ ->
-            node.Display()
-            failwithf "Explosion on non regular number"
+        match l.Value, r.Value with
+        | Leaf lv, Leaf rv -> 
+            let li = allLeafNodes |> List.findIndex (fun f -> f.Id = l.Id)
+            if li > 0 then
+                addValue allLeafNodes.[li - 1] lv
+            let ri = allLeafNodes |> List.findIndex (fun f -> f.Id = r.Id)
+            if ri < (allLeafNodes.Length - 1) then
+                addValue allLeafNodes.[ri + 1] rv
+        | _ -> failwithf "Explosion on non regular number"
     | Leaf _ -> 
         failwithf "Explosion on leaf"
+//        if right.IsSome then
+    //            addValue right.Value r
+    //        let left = getNumberToTheLeft node
+    //        if left.IsSome then
+    //            addValue left.Value l
+    //        ()
+    //    | _ ->
+    //        printfn "%s" (node.Display())
+    //        failwithf "Explosion on non regular number"
+    //| Leaf _ -> 
+    //    failwithf "Explosion on leaf"
 
+    
     // replace with 0
     match node.Parent with
     | Some p ->
@@ -168,9 +182,18 @@ let explode (node:Node) =
         | _ -> failwithf "Neither left nor right was the current node ..."
     | None -> failwithf "Parent is not a branch"
 
+let assertExplosion (n:Node) (selector:Node->Node) expected =
+    let initial = n.Display()
+    let toExplode = n |> selector
+    explode n toExplode
+    let result = n.Display()
+    if result <> expected then
+        failwithf "%s exploded into %s instead of %s" initial result expected
+    else 
+        printfn "%s exploded into %s" initial expected 
 
-let r = "[[[[[9,8],1],2],3],4]" |> read 
-let e = r |> left |> left |> left |> left
-r.Display()
-explode e
-r.Display()
+assertExplosion ("[[[[[9,8],1],2],3],4]" |> read) (left >> left >> left >> left) "[[[[0,9],2],3],4]"
+assertExplosion ("[7,[6,[5,[4,[3,2]]]]]" |> read) (right >> right >> right >> right) "[7,[6,[5,[7,0]]]]"
+assertExplosion ("[[6,[5,[4,[3,2]]]],1]" |> read) (left >> right >> right >> right) "[[6,[5,[7,0]]],3]"
+assertExplosion ("[[3,[2,[8,0]]],[9,[5,[4,[3,2]]]]]" |> read) (right >> right >> right >> right) "[[3,[2,[8,0]]],[9,[5,[7,0]]]]"
+assertExplosion ("[[3,[2,[1,[7,3]]]],[6,[5,[4,[3,2]]]]]" |> read) (left >> right >> right >> right) "[[3,[2,[8,0]]],[9,[5,[4,[3,2]]]]]"
