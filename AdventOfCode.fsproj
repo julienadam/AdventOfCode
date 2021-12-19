@@ -46,6 +46,19 @@
     <Content Include="Input\2021\day16.txt" />
     <Content Include="Input\2021\Day18.txt" />
     <Content Include="Input\2021\Day18_sample1.txt" />
+    <Content Include="Input\2021\Day18_sample1h.txt" />
+    <Content Include="Input\2021\Day18_sample1g.txt" />
+    <Content Include="Input\2021\Day18_sample1f.txt" />
+    <Content Include="Input\2021\Day18_sample1e.txt" />
+    <Content Include="Input\2021\Day18_sample1d.txt" />
+    <Content Include="Input\2021\Day18_sample1c.txt" />
+    <Content Include="Input\2021\Day18_sample1b.txt" />
+    <Content Include="Input\2021\Day18_sample1a.txt" />
+    <Content Include="Input\2021\Day18_sample2.txt" />
+    <Content Include="Input\2021\Day18_sample3.txt" />
+    <Content Include="Input\2021\Day18_sample4.txt" />
+    <Content Include="Input\2021\Day18_sample6.txt" />
+    <Content Include="Input\2021\Day18_sample5.txt" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 

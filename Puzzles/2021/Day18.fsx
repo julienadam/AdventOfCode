@@ -157,7 +157,7 @@ let add n1 n2 =
     let result = { Parent = None; Value = Branch (n1, n2); Id = getId() }
     n1.SetParent result
     n2.SetParent result
-    printfn "%s + %s gives %s" (n1.Display()) (n2.Display()) (result.Display())
+    //printfn "%s + %s gives %s" (n1.Display()) (n2.Display()) (result.Display())
     result
 
 let r = add ("[5,4]" |> read) ("[3,2]" |> read)
@@ -199,11 +199,11 @@ let findAction n : ReduceAction option =
 let rec reduce n =
     match findAction n with
     | Some (Explode e) -> 
-        printfn "Explosion in %s on %s" (n.Display()) (e.Display())
+        // printfn "Explosion in %s on %s" (n.Display()) (e.Display())
         explode n e
         reduce n
     | Some (Split s) ->
-        printfn "Split in %s on %s" (n.Display()) (s.Display())
+        // printfn "Split in %s on %s" (n.Display()) (s.Display())
         split s
         reduce n
     | None ->
@@ -271,6 +271,26 @@ assert("[[[[3,0],[5,3]],[4,4]],[5,5]]" |> read |> mag = 791)
 assert("[[[[5,0],[7,4]],[5,5]],[6,6]]" |> read |> mag = 1137)
 assert("[[[[8,7],[7,7]],[[8,6],[7,7]]],[[[0,7],[6,6]],[8,7]]]" |> read |> mag = 3488)
 
+// "[[[[6,6],[7,6]],[[7,7],[7,0]]],[[[7,7],[7,7]],[[7,8],[9,9]]]]"
+solve1 "Day18_sample6.txt" |> Option.get |> mag |> Dump
+solve1 "Day18.txt" |> Option.get |> mag |> Dump
 
+assert(add ("[[2,[[7,7],7]],[[5,8],[[9,3],[0,2]]]]" |> read) ("[[[0,[5,8]],[[1,7],[9,6]]],[[4,[1,2]],[[1,4],2]]]" |> read) |> reduce |> mag = 3993)
 
+let solve2 inputFile =
+    let nodes = 
+        getInputPath inputFile 
+        |> File.ReadAllLines
+    
+    Seq.allPairs nodes nodes 
+    |> Seq.filter (fun (s1,s2) -> s1 <> s2)
+    |> Seq.map (fun (s1, s2) -> s1 |> read, s2|> read)
+    |> Seq.map (fun (n1, n2) -> (add n1 n2) |> reduce |> mag)
+    |> Seq.max
+    |> Dump
 
+solve2 "Day18_sample6.txt"
+
+let sw = Stopwatch.StartNew()
+let r2 = solve2 "Day18.txt"
+printfn "%i. Found in %A" r2 sw.Elapsed
