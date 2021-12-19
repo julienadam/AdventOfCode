@@ -157,8 +157,120 @@ let add n1 n2 =
     let result = { Parent = None; Value = Branch (n1, n2); Id = getId() }
     n1.SetParent result
     n2.SetParent result
+    printfn "%s + %s gives %s" (n1.Display()) (n2.Display()) (result.Display())
     result
 
 let r = add ("[5,4]" |> read) ("[3,2]" |> read)
 r.Display()
+
+type ReduceAction =
+| Explode of Node
+| Split of Node
+
+let getDepth n =
+    let mutable d = 1
+    let mutable node = n
+    while node.Parent.IsSome do
+        node <- node.Parent.Value
+        d <- d + 1
+    d
+
+let findAction n : ReduceAction option =
+    let rec findExplodeActionRec (na:Node) depth = 
+        // TODO Invariant check on depth and parents
+        match na.Value, depth with
+        | Branch _ , d when d > 4 ->
+            //printfn "Found explosion at depth %i" (getDepth na)
+            Explode na |> Some
+        | Branch (left, right), _ ->
+            (findExplodeActionRec left (depth + 1))  
+            |> Option.orElse (findExplodeActionRec right (depth + 1)) 
+        | _ -> None
+    
+    let findSplitAction (na:Node) =
+        na 
+        |>depthFirst 
+        |> Seq.tryFind (fun f -> match f.Value with | Leaf x when x >= 10 -> true | _ -> false) 
+        |> Option.map (fun o -> Split o)
+
+    (findExplodeActionRec n 1)
+    |>Option.orElse (findSplitAction n)
+
+let rec reduce n =
+    match findAction n with
+    | Some (Explode e) -> 
+        printfn "Explosion in %s on %s" (n.Display()) (e.Display())
+        explode n e
+        reduce n
+    | Some (Split s) ->
+        printfn "Split in %s on %s" (n.Display()) (s.Display())
+        split s
+        reduce n
+    | None ->
+        n
+
+//let test1 = add ("[[[[4,3],4],4],[7,[[8,4],9]]]" |> read) ("[1,1]" |> read)
+//let reduced = test1 |> reduce
+//assert(reduced.Display() = "[[[[0,7],4],[[7,8],[6,0]]],[8,1]]")
+
+let solve1 inputFile = 
+    getInputPath inputFile 
+    |> File.ReadAllLines
+    |> Seq.map read
+    |> Seq.fold (fun sumNode n ->
+        match sumNode with
+        | None -> 
+            Some n
+        | Some s ->
+            let sum = add s n 
+            Some(reduce sum)
+        ) None
+
+let assertSample inputFile expectedOutcome =
+    let result = solve1 inputFile
+    let actual = result.Value.Display()
+    if actual <> expectedOutcome then
+        failwithf "Expected:\r\n%sActual:\r\n%s" expectedOutcome actual
+
+
+assertSample "Day18_sample2.txt" "[[[[1,1],[2,2]],[3,3]],[4,4]]"
+assertSample "Day18_sample3.txt" "[[[[3,0],[5,3]],[4,4]],[5,5]]"
+assertSample "Day18_sample3.txt" "[[[[3,0],[5,3]],[4,4]],[5,5]]"
+assertSample "Day18_sample4.txt" "[[[[5,0],[7,4]],[5,5]],[6,6]]"
+assertSample "Day18_sample5.txt" "[[[[0,7],4],[[7,8],[6,0]]],[8,1]]"
+
+assertSample "Day18_sample1a.txt" "[[[[4,0],[5,4]],[[7,7],[6,0]]],[[8,[7,7]],[[7,9],[5,0]]]]"
+assertSample "Day18_sample1b.txt" "[[[[6,7],[6,7]],[[7,7],[0,7]]],[[[8,7],[7,7]],[[8,8],[8,0]]]]"
+assertSample "Day18_sample1c.txt" "[[[[7,0],[7,7]],[[7,7],[7,8]]],[[[7,7],[8,8]],[[7,7],[8,7]]]]"
+assertSample "Day18_sample1d.txt" "[[[[7,7],[7,8]],[[9,5],[8,7]]],[[[6,8],[0,8]],[[9,9],[9,0]]]]"
+assertSample "Day18_sample1e.txt" "[[[[6,6],[6,6]],[[6,0],[6,7]]],[[[7,7],[8,9]],[8,[8,1]]]]"
+assertSample "Day18_sample1f.txt" "[[[[6,6],[7,7]],[[0,7],[7,7]]],[[[5,5],[5,6]],9]]"
+assertSample "Day18_sample1g.txt" "[[[[7,8],[6,7]],[[6,8],[0,8]]],[[[7,7],[5,0]],[[5,5],[5,6]]]]"
+assertSample "Day18_sample1h.txt" "[[[[7,7],[7,7]],[[8,7],[8,7]]],[[[7,0],[7,7]],9]]"
+assertSample "Day18_sample1.txt" "[[[[8,7],[7,7]],[[8,6],[7,7]]],[[[0,7],[6,6]],[8,7]]]"
+assertSample "Day18_sample6.txt" "[[[[6,6],[7,6]],[[7,7],[7,0]]],[[[7,7],[7,7]],[[7,8],[9,9]]]]"
+
+let rec mag n =
+    match n.Value with
+    | Branch (left, right) ->
+        3 * (mag left) + 2 * (mag right)
+    | Leaf v ->
+        v
+
+    (* The magnitude of a pair is 3 times the magnitude of its left element plus 2 times 
+        the magnitude of its right element. The magnitude of a regular number is just that number.
+    *)
+
+assert("[9,1]" |> read |> mag = 29)
+assert("[1,9]" |> read |> mag = 21)
+assert("[[9,1],[1,9]]" |> read |> mag = 129)
+assert("[[1,2],[[3,4],5]]" |> read |> mag = 143)
+assert("[[[[0,7],4],[[7,8],[6,0]]],[8,1]]" |> read |> mag = 1384)
+assert("[[[[1,1],[2,2]],[3,3]],[4,4]]" |> read |> mag = 445)
+assert("[[[[3,0],[5,3]],[4,4]],[5,5]]" |> read |> mag = 791)
+assert("[[[[5,0],[7,4]],[5,5]],[6,6]]" |> read |> mag = 1137)
+assert("[[[[8,7],[7,7]],[[8,6],[7,7]]],[[[0,7],[6,6]],[8,7]]]" |> read |> mag = 3488)
+
+
+
 
