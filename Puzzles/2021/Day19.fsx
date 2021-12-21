@@ -3,6 +3,7 @@
 open System.Diagnostics
 open System
 open MathNet.Numerics.LinearAlgebra
+open System.Collections.Generic
 
 #load "../../Tools.fsx"
 
@@ -19,7 +20,6 @@ let mapPosLine (l:string) =
             else
                 i |> float
             )
-        //|> Array.toList
     |> vector
 
 let inputStr = getInputPath "Day19_sample1.txt" |> File.ReadAllText
@@ -28,15 +28,6 @@ let input =
     |> Array.map (fun lines -> lines.Split("\r\n") |> Array.skip 1)
     |> Array.map (fun positions -> positions |> Array.map mapPosLine |> Array.toList)
     |> Array.toList
-
-
-// Possibles transformations 
-// x is -x
-// x is y
-// x is -y
-// x is z
-// x is -z
-
 
 let racos multipleOfPi =
     match multipleOfPi with
@@ -53,7 +44,6 @@ let rasin multipleOfPi =
     | 2 -> 0.0
     | 3 -> -1.0
     | _ -> failwithf "Invalid multiplier of pi"
-    
 
 let genRotations ()= seq {
     for rx = 0 to 3 do
@@ -75,13 +65,13 @@ let genRotations ()= seq {
                     [0.0     ; 0.0        ; 1.0]
                 ]
 
-                // if rx <> ry && rx <> rz && ry <> rz  then 
                 yield (matrix mx) * (matrix my) * (matrix mz)
 }
 
 let rotations = genRotations() |> Seq.distinct
 
-// rotations |> Dump
+
+
 
 let scanner0, otherScanners = input |> List.head, input |> List.tail
 
@@ -97,22 +87,44 @@ let have12BeaconsInCommonForRotation (scannerA: Vector<float> list) (scannerB: V
             |> Seq.filter id
             |> Seq.length
         
-        //printfn "%i matches found" mappedA
-       
         if mappedA >= 11 then
-            Some (trans, rot)
+            Some (-trans, rot)
         else
             None
     )
 
 let findTransformationMatrixIfAny scannerA scannerB =
     match rotations |> Seq.tryPick (fun rot -> 
-        //printfn "Trying rotation %O" rot
         have12BeaconsInCommonForRotation scannerA scannerB rot) with
     | Some (trans, rot) -> 
         printfn "Scanners match on 12 beacons or more for rotation : %O and translation : %O" rot trans
+        Some (trans, rot)
     | None ->
         printfn "No match between scanners, tried all rotations"
+        None
 
-findTransformationMatrixIfAny scanner0 (otherScanners |> List.head)
+let rec findAllBeacons scanner remainingScanners (rot:Matrix<float>) (trans:Vector<float>) (beacons: HashSet<Vector<float>>)=
+    printfn "Total beacons %o" beacons.Count
+    match remainingScanners with
+    | [] -> beacons
+    | _ ->
+        match remainingScanners |> List.tryPick (fun otherScanner -> 
+            findTransformationMatrixIfAny scanner otherScanner 
+            |> Option.map (fun (l,r) -> otherScanner, l, r)) with
+        | Some (nextScanner, localTrans, localRot) ->
+            let totalRotation = rot * localRot
+            let totalTranslation = localTrans + trans
+            
+            // Transform all points from scannerB into scanner A and add that to the global scanner map
+            nextScanner |> Seq.iter(fun v ->
+                let transformedBeaconPos = (v * totalRotation) + totalTranslation
+                beacons.Add(transformedBeaconPos) |> ignore)
 
+            findAllBeacons nextScanner (remainingScanners |> List.filter (fun s -> s <> nextScanner)) totalRotation totalTranslation beacons
+        | None -> failwithf "Failed to find a rotation and translation"
+
+let initialRotation = Matrix<float>.Build.DenseIdentity(3,3)
+let initialTranslation = ([0.0;0.0;0.0] |> vector)
+
+let allBeacons = findAllBeacons input.Head input.Tail initialRotation initialTranslation (new HashSet<Vector<float>>())
+allBeacons |> Seq.iter (fun v -> printfn "%O" v)
