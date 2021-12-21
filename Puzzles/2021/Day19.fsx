@@ -10,6 +10,17 @@ open System.Collections.Generic
 open Tools
 open System.IO
 
+type CoordinatesTransform = {
+    Rotation: Matrix<float>
+    Translation: Vector<float>
+}
+
+type Scanner = {
+    Name: string
+    Beacons: Vector<float> list
+    // CoordinatesTransform: CoordinatesTransform option
+}
+
 let mapPosLine (l:string) =
     
     l.Split(",") 
@@ -27,6 +38,7 @@ let input =
     inputStr.Split("\r\n\r\n")
     |> Array.map (fun lines -> lines.Split("\r\n") |> Array.skip 1)
     |> Array.map (fun positions -> positions |> Array.map mapPosLine |> Array.toList)
+    |> Array.mapi (fun id beacons -> { Name = sprintf "Scanner %i" id; Beacons = beacons })
     |> Array.toList
 
 let racos multipleOfPi =
@@ -71,10 +83,6 @@ let genRotations ()= seq {
 let rotations = genRotations() |> Seq.distinct
 
 
-
-
-let scanner0, otherScanners = input |> List.head, input |> List.tail
-
 let have12BeaconsInCommonForRotation (scannerA: Vector<float> list) (scannerB: Vector<float> list) (rot:Matrix<float>) =
     let rotatedB = scannerB |> List.map (fun v -> v * rot)
     List.allPairs scannerA rotatedB |> List.tryPick (fun (pA, pB) -> 
@@ -94,37 +102,75 @@ let have12BeaconsInCommonForRotation (scannerA: Vector<float> list) (scannerB: V
     )
 
 let findTransformationMatrixIfAny scannerA scannerB =
-    match rotations |> Seq.tryPick (fun rot -> 
-        have12BeaconsInCommonForRotation scannerA scannerB rot) with
-    | Some (trans, rot) -> 
-        printfn "Scanners match on 12 beacons or more for rotation : %O and translation : %O" rot trans
-        Some (trans, rot)
-    | None ->
-        printfn "No match between scanners, tried all rotations"
-        None
+    rotations |> Seq.tryPick (fun rot -> have12BeaconsInCommonForRotation scannerA scannerB rot)
+    
+let sprintVec (v:Vector<float>) = sprintf "(%0.0f,%0.0f,%0.0f)" v.[0] v.[1] v.[2]
+let printVec v = printfn "%s" (sprintVec v)
 
-let rec findAllBeacons scanner remainingScanners (rot:Matrix<float>) (trans:Vector<float>) (beacons: HashSet<Vector<float>>)=
-    printfn "Total beacons %o" beacons.Count
+let applyTransformation t v = (v * t.Rotation + t.Translation)
+
+let printScanner scanner =
+    printfn "%s" scanner.Name
+    //match scanner.CoordinatesTransform with
+    //| Some t ->
+    //    printf "Found at" 
+    //    printVec t.Translation
+    //    scanner.Beacons |> Seq.iter (fun p ->
+    //        printfn "%s -> %s" (sprintVec p) (sprintVec (applyTransformation t p)))
+    //| _ -> 
+    scanner.Beacons |> Seq.iter printVec
+
+let transformScanner scanner transform =
+    { scanner with Beacons = scanner.Beacons |> List.map(fun p -> applyTransformation transform p) }
+
+
+let mutable iteration = 0
+let rec findAllBeacons (scannersFound:Scanner list) (remainingScanners: Scanner list) (beacons: HashSet<Vector<float>>)=
+    iteration <- iteration + 1
+    printfn "Iteration %i Total beacons %o" iteration beacons.Count
+    scannersFound |> Seq.iter printScanner
+
     match remainingScanners with
     | [] -> beacons
     | _ ->
-        match remainingScanners |> List.tryPick (fun otherScanner -> 
-            findTransformationMatrixIfAny scanner otherScanner 
-            |> Option.map (fun (l,r) -> otherScanner, l, r)) with
-        | Some (nextScanner, localTrans, localRot) ->
-            let totalRotation = rot * localRot
-            let totalTranslation = localTrans + trans
-            
-            // Transform all points from scannerB into scanner A and add that to the global scanner map
-            nextScanner |> Seq.iter(fun v ->
-                let transformedBeaconPos = (v * totalRotation) + totalTranslation
-                beacons.Add(transformedBeaconPos) |> ignore)
+        let matchesFound =
+            List.allPairs scannersFound remainingScanners
+            |> List.choose (fun (scannerA, scannerB) -> 
+                findTransformationMatrixIfAny scannerA.Beacons scannerB.Beacons
+                |> Option.map (fun (trans,rot) -> 
+                    printfn "Found match between scanner %s and %s" scannerA.Name scannerB.Name
+                    scannerA, scannerB, trans,rot))
 
-            findAllBeacons nextScanner (remainingScanners |> List.filter (fun s -> s <> nextScanner)) totalRotation totalTranslation beacons
-        | None -> failwithf "Failed to find a rotation and translation"
+        let newScanners = (matchesFound |> List.map (fun (_,b,_,_) -> b))
+        let newRemainingScanners = remainingScanners |> List.filter (fun s -> newScanners |> List.contains s |> not)
 
-let initialRotation = Matrix<float>.Build.DenseIdentity(3,3)
-let initialTranslation = ([0.0;0.0;0.0] |> vector)
+        let newScannersFound = 
+            matchesFound |> List.map (fun (scannerA, scannerB, trans, rot) ->
+                let transformedB = transformScanner scannerB { Rotation = rot; Translation = trans}
+                transformedB.Beacons |> Seq.iter (fun p -> beacons.Add(p) |> ignore)
+                transformedB
+                //match scannerA.CoordinatesTransform with
+                //| None -> failwithf "Found match on scanner that hasn't been fixed yet"
+                //| Some transform -> 
+                //    // Add all the beacons of scanner B to the beacon list, after transformation
+                //    let totalRotation, totalTranslation = rot * transform.Rotation, trans + transform.Translation
+                //    scannerB.Beacons 
+                //    |> List.map (fun p -> (p * totalRotation) + totalTranslation)
+                //    |> Seq.iter (fun p -> beacons.Add(p) |> ignore)
+                //    // Update the scanner we just found with their coords transform
+                //    { scannerB with CoordinatesTransform = Some { Rotation = totalRotation; Translation = totalTranslation}}
+            )
 
-let allBeacons = findAllBeacons input.Head input.Tail initialRotation initialTranslation (new HashSet<Vector<float>>())
-allBeacons |> Seq.iter (fun v -> printfn "%O" v)
+        findAllBeacons newScannersFound newRemainingScanners beacons
+
+
+
+//let initialRotation = Matrix<float>.Build.DenseIdentity(3,3)
+//let initialTranslation = ([0.0;0.0;0.0] |> vector)
+
+
+let initialBeacons = new HashSet<Vector<float>>(input.Head.Beacons)
+let allBeacons = findAllBeacons [input.Head ] input.Tail initialBeacons
+
+allBeacons |> Seq.iter (fun v -> printfn "(%0.0f,%0.0f,%0.0f)" v.[0] v.[1] v.[2])
+allBeacons |> Seq.length
