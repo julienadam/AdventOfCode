@@ -1,10 +1,8 @@
-﻿open MathNet.Numerics.LinearAlgebra
-
-
-#r "nuget: MathNet.Numerics.FSharp"
+﻿#r "nuget: MathNet.Numerics.FSharp"
 
 open System.Diagnostics
 open System
+open MathNet.Numerics.LinearAlgebra
 
 #load "../../Tools.fsx"
 
@@ -24,7 +22,7 @@ let mapPosLine (l:string) =
         //|> Array.toList
     |> vector
 
-let inputStr = getInputPath "Day19.txt" |> File.ReadAllText
+let inputStr = getInputPath "Day19_sample1.txt" |> File.ReadAllText
 let input = 
     inputStr.Split("\r\n\r\n")
     |> Array.map (fun lines -> lines.Split("\r\n") |> Array.skip 1)
@@ -83,4 +81,38 @@ let genRotations ()= seq {
 
 let rotations = genRotations() |> Seq.distinct
 
-rotations |> Dump
+// rotations |> Dump
+
+let scanner0, otherScanners = input |> List.head, input |> List.tail
+
+let have12BeaconsInCommonForRotation (scannerA: Vector<float> list) (scannerB: Vector<float> list) (rot:Matrix<float>) =
+    let rotatedB = scannerB |> List.map (fun v -> v * rot)
+    List.allPairs scannerA rotatedB |> List.tryPick (fun (pA, pB) -> 
+        let trans = pB - pA
+        let mappedA =
+            scannerA 
+            |> Seq.where (fun p -> p <> pA) 
+            |> Seq.map (fun p -> p + trans)
+            |> Seq.map(fun p -> rotatedB |> List.contains p)
+            |> Seq.filter id
+            |> Seq.length
+        
+        //printfn "%i matches found" mappedA
+       
+        if mappedA >= 11 then
+            Some (trans, rot)
+        else
+            None
+    )
+
+let findTransformationMatrixIfAny scannerA scannerB =
+    match rotations |> Seq.tryPick (fun rot -> 
+        //printfn "Trying rotation %O" rot
+        have12BeaconsInCommonForRotation scannerA scannerB rot) with
+    | Some (trans, rot) -> 
+        printfn "Scanners match on 12 beacons or more for rotation : %O and translation : %O" rot trans
+    | None ->
+        printfn "No match between scanners, tried all rotations"
+
+findTransformationMatrixIfAny scanner0 (otherScanners |> List.head)
+
