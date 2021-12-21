@@ -33,8 +33,8 @@ let mapPosLine (l:string) =
             )
     |> vector
 
-let inputStr = getInputPath "Day19_sample1.txt" |> File.ReadAllText
-let input = 
+let getInput fileName = 
+    let inputStr = getInputPath fileName |> File.ReadAllText
     inputStr.Split("\r\n\r\n")
     |> Array.map (fun lines -> lines.Split("\r\n") |> Array.skip 1)
     |> Array.map (fun positions -> positions |> Array.map mapPosLine |> Array.toList)
@@ -127,8 +127,8 @@ let transformScanner scanner transform =
 let mutable iteration = 0
 let rec findAllBeacons (scannersFound:Scanner list) (remainingScanners: Scanner list) (beacons: HashSet<Vector<float>>)=
     iteration <- iteration + 1
-    printfn "Iteration %i Total beacons %o" iteration beacons.Count
-    scannersFound |> Seq.iter printScanner
+    printfn "Iteration %i Scanners found %i Scanners remaining %i. Beacons found : %i" iteration scannersFound.Length remainingScanners.Length beacons.Count
+    //scannersFound |> Seq.iter printScanner
 
     match remainingScanners with
     | [] -> beacons
@@ -169,8 +169,15 @@ let rec findAllBeacons (scannersFound:Scanner list) (remainingScanners: Scanner 
 //let initialTranslation = ([0.0;0.0;0.0] |> vector)
 
 
-let initialBeacons = new HashSet<Vector<float>>(input.Head.Beacons)
-let allBeacons = findAllBeacons [input.Head ] input.Tail initialBeacons
+let solve1 fileName =
+    let input = getInput fileName
 
-allBeacons |> Seq.iter (fun v -> printfn "(%0.0f,%0.0f,%0.0f)" v.[0] v.[1] v.[2])
-allBeacons |> Seq.length
+    let initialBeacons = new HashSet<Vector<float>>(input.Head.Beacons)
+    let allBeacons = findAllBeacons [input.Head ] input.Tail initialBeacons
+
+    allBeacons |> Seq.iter (fun v -> printfn "(%0.0f,%0.0f,%0.0f)" v.[0] v.[1] v.[2])
+    allBeacons |> Seq.length
+
+assert(solve1 "Day19_sample.txt" = 79)
+
+solve1 "Day19.txt"
