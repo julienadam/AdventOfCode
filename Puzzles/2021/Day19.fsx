@@ -1,5 +1,8 @@
 ﻿#r "nuget: MathNet.Numerics.FSharp"
 
+// Brute force with _some_ pruning
+// Needs a heuristic to find closest scanners
+
 open System.Diagnostics
 open System
 open MathNet.Numerics.LinearAlgebra
