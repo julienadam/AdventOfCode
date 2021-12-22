@@ -49,11 +49,14 @@ let getPixelsAround (row:int) (col:int) (image: Map<int*int, int>) defaultVal = 
 let boolsToIntRev bools = bools |> Array.rev |> Array.mapi (fun i b -> b <<< i) |> Array.sum
 
 let getBoundsOfNextImage (image:Map<int*int, int>) =
+    // Expand the image bounds by 2 in all directions for the next step
     let xs = image |> Map.keys |> Seq.map fst |> Seq.toList
     let ys = image |> Map.keys |> Seq.map snd |> Seq.toList
     (((xs |> Seq.min) - 2), ((xs |> Seq.max) + 2)), (((ys |> Seq.min) - 2), ((ys |> Seq.max) + 2)) 
 
 let getDefaultValueForStep step (enhancement:int list) =
+    // Special case when enhancement.[0] is 1, all the "infinite" pixels
+    // switch on, and possibly off again if enhancement.[511] is 0
     match step % 2, enhancement.[0] with
     | _, 0 -> 0
     | 1, _ -> enhancement.[0]
@@ -63,8 +66,7 @@ let getDefaultValueForStep step (enhancement:int list) =
 
 let buildNextImage image step (enhancement:int list) = seq {
     let ((minR, maxR), (minC, maxC)) = getBoundsOfNextImage image
-    //printfn "New bounds : row [%i to %i], col [%i to %i]"  minR maxR minC maxC
-
+    
     let defaultVal = getDefaultValueForStep step enhancement
 
     for r = minR to maxR do
@@ -86,37 +88,42 @@ let printImage image step enhancement =
             | i -> failwithf "invalid pixel value %i" i
         printfn ""
 
+let enhance times image enhancement =
+    [0..times - 1] |> Seq.fold (fun state step -> 
+        printfn "Step %i" step
+        buildNextImage state step enhancement
+        |> tuple3ToMapOfTuple2
+        )
+        image
+
 let solve1 fileName =
     let enhancement, image = getInput fileName
-    let mutable step = 0
-    
-    let defaultVal = getDefaultValueForStep step enhancement
-    //printfn "Default val %i" defaultVal
-    //printImage image step enhancement
+    let finalImage = enhance 2 image enhancement
 
-    let afterStep1 = 
-        buildNextImage image step enhancement
-        |> tuple3ToMapOfTuple2
-    
-    step <- step + 1
+    printImage finalImage 1 enhancement
 
-    //printImage afterStep1 step enhancement
-    //printfn "After step 1 : %i pixels lit" afterStep1.Count
+    finalImage 
+    |> Map.values 
+    |> Seq.filter (fun c -> c = 1) |> Seq.length
 
-    let afterStep2 =
-        buildNextImage afterStep1 step enhancement
-        |> tuple3ToMapOfTuple2
-
-    step <- step + 1
-   
-    // printImage afterStep2 step enhancement
-    // printfn "After step 1 : %i pixels lit" afterStep2.Count
-    
-    afterStep2 |> Map.values |> Seq.filter (fun c -> c = 1) |> Seq.length
 
 assert(solve1 "Day20_Sample1.txt" = 35)
 
 let sw = Stopwatch.StartNew()
-printfn "Day19 Part 1: %i. Solved in %A" (solve1 "Day20.txt") sw.Elapsed
+printfn "Day20 Part 1: %i. Solved in %A" (solve1 "Day20.txt") sw.Elapsed
+
+let solve2 fileName =
+    let enhancement, image = getInput fileName
+    let finalImage = enhance 50 image enhancement
+
+    printImage finalImage 49 enhancement
+
+    finalImage 
+    |> Map.values 
+    |> Seq.filter (fun c -> c = 1) |> Seq.length
+
+// assert(solve2 "Day20_Sample1.txt" = 3351)
 
 
+sw.Restart()
+printfn "Day20 Part 1: %i. Solved in %A" (solve2 "Day20.txt") sw.Elapsed
