@@ -124,6 +124,7 @@
     <None Include="Puzzles\2021\Day18.fsx" />
     <None Include="Puzzles\2021\Day19.fsx" />
     <None Include="Puzzles\2021\Day20.fsx" />
+    <None Include="Puzzles\2021\Day21.fsx" />
   </ItemGroup>
 
 </Project>
