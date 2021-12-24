@@ -1,5 +1,6 @@
 ﻿open System
 open System.IO
+open System.Text.RegularExpressions
 
 let getInputPath file = Path.Combine(__SOURCE_DIRECTORY__, "Input", "2021", file)
 
@@ -14,6 +15,10 @@ module SeqEx =
 [<AutoOpen>]
 module Distance =
     let manhattanDistance (x1:int) (y1:int) (x2:int) (y2:int) = Math.Abs(x1 - x2) + Math.Abs(y1 - y2)
+
+[<AutoOpen>]
+module RegexTools =
+    let inline mInt (groupName:string) (m:Match) = m.Groups.[groupName].Value |> int
 
 module Array2DTools =
 

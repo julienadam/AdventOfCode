@@ -63,6 +63,9 @@
     <Content Include="Input\2021\Day19_sample1.txt" />
     <Content Include="Input\2021\Day20.txt" />
     <Content Include="Input\2021\Day20_Sample1.txt" />
+    <Content Include="Input\2021\Day22.txt" />
+    <Content Include="Input\2021\Day22_sample1.txt" />
+    <Content Include="Input\2021\Day22_sample2.txt" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
@@ -125,6 +128,7 @@
     <None Include="Puzzles\2021\Day19.fsx" />
     <None Include="Puzzles\2021\Day20.fsx" />
     <None Include="Puzzles\2021\Day21.fsx" />
+    <None Include="Puzzles\2021\Day22.fsx" />
   </ItemGroup>
 
 </Project>
