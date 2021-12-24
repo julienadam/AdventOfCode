@@ -106,10 +106,10 @@ let inline add2 (a1,a2) (b1,b2) = (a1+b1, a2+b2)
 
 let inline mult2 (a1,a2) x = (a1 * x, a2 * x)
 
-let mutable cacheHits = 0
-let mutable cacheMiss = 0
+let mutable cacheHits = 0.0
+let mutable cacheMiss = 0.0
 
-let rec rollDice (game: Game) roll (memo:Dictionary<Game, Wins>)=
+let rec rollDice (game: Game) roll (memo:Dictionary<Game*int, Wins>)=
     
     let (p1, p1Score), (p2, p2Score), turn = game
 
@@ -129,22 +129,22 @@ let rec rollDice (game: Game) roll (memo:Dictionary<Game, Wins>)=
     else if (np2Score >= 21) then
         (0L, 1L)
     else
-        match memo.TryGetValue game with
+        match memo.TryGetValue ((game, roll)) with
         | true, v ->
-            cacheHits <- cacheHits + 1
+            cacheHits <- cacheHits + 1.0
             v
         | false, _ ->
-            cacheMiss <- cacheMiss + 1
+            cacheMiss <- cacheMiss + 1.0
             let result = 
                 diracRollsAndOccurences 
                 |> Seq.map (fun (nextRoll, occurs) ->
                     mult2 (rollDice ((np1,np1Score),(np2,np2Score),nextTurn) nextRoll memo) occurs)
                 |> Seq.fold add2 (0L, 0L)
-            //memo.Add(game, result)
+            memo.Add((game, roll), result)
             result
 
 let solve2 p1Pos p2Pos =
-    let memo = new Dictionary<Game, Wins>()
+    let memo = new Dictionary<(Game*int), Wins>()
     diracRollsAndOccurences 
     |> Seq.map (fun (nextRoll, occurs) ->
         mult2 (rollDice ((p1Pos, 0),(p2Pos, 0), Player1) nextRoll memo) occurs)
@@ -153,7 +153,4 @@ let solve2 p1Pos p2Pos =
 assert(solve2 4 8 = (444356092776315L, 341960390180808L))
 let sw = Stopwatch.StartNew()
 let (s1,s2) = solve2 4 1
-printfn "Part 2 solution : %i. Took %A" (max s1 s2) sw.Elapsed
-
-cacheHits
-cacheMiss
+printfn "Part 2 solution : %i. Took %A. Cache hit %f%%" (max s1 s2) sw.Elapsed ((cacheHits / (cacheMiss + cacheHits)) * 100.0)
