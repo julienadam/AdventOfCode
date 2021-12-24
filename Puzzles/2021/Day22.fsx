@@ -23,8 +23,6 @@ let mapLine line =
     let (instruction:RebootInstruction) = (xRange, yRange, zRange), active
     instruction
 
-// mapLine "off x=-54112..-39298,y=-85059..-49293,z=-27449..7877"
-
 let enumRange (s,e) = seq { 
     for i = s to e do yield i
 }
@@ -86,8 +84,45 @@ assert(intersect ((-2,2),(-2,2),(-2,2)) ((5,5),(-1,1),(-1,1)) = None)
 assert(intersect ((-2,2),(-2,2),(-2,2)) ((-1,1),(-5,-5),(-1,1)) = None)
 assert(intersect ((-2,2),(-2,2),(-2,2)) ((-1,1),(-1,-1),(6,6)) = None)
 
+let chop (instructions: RebootInstruction list) =
+
+    let xPoints = 
+        instructions 
+        |> Seq.collect (fun (((xs,xe), _, _), _) -> [xs;xe]) 
+        |> Seq.distinct 
+        |> Seq.sort 
+        |> Seq.mapi (fun i v -> if i = 0 then v - 1 else v)
+    let yPoints = 
+        instructions 
+        |> Seq.collect (fun ((_, (ys,ye), _), _) -> [ys;ye]) 
+        |> Seq.distinct 
+        |> Seq.sort 
+        |> Seq.mapi (fun i v -> if i = 0 then v - 1 else v)
+    let zPoints = 
+        instructions 
+        |> Seq.collect (fun ((_, _, (zs,ze)), _) -> [zs;ze]) 
+        |> Seq.distinct 
+        |> Seq.sort 
+        |> Seq.mapi (fun i v -> if i = 0 then v - 1 else v)
+
+    //printfn "%i pairs on X" (xPoints |> Seq.pairwise |> Seq.length)
+    //printfn "%i pairs on Y" (yPoints |> Seq.pairwise |> Seq.length)
+    //printfn "%i pairs on Z" (zPoints |> Seq.pairwise |> Seq.length)
+
+    seq {
+        for (xs,xe) in xPoints |> Seq.pairwise do
+            for (ys,ye) in yPoints |> Seq.pairwise do
+                for (zs,ze) in zPoints |> Seq.pairwise do
+                    yield ((xs + 1,xe), (ys + 1,ye), (zs + 1,ze)) |> Cuboid
+    }
+
+let inline vol3 ((xs,xe),(ys,ye),(zs,ze)) = (xe-xs)*(ye-ys)*(ze-zs)
 
 let solve2 fileName = 
+    // Idea 0 :
+    // brute force each pixel, traversing each cube. Not likely
+    // 250000*250000*250000 means millions of billions of cubes
+
     // Idea 1 : 
     //  take the cubes by pairs
     //  keep non-intersecting cubes
@@ -95,16 +130,50 @@ let solve2 fileName =
     //  take all of these and sum the volumes of the ON ones ?
 
     // Idea 2 :
-    // brute force each pixel, traversing each cube
+    // Count cubes occupied by first instr
+    // Take next cube, count cubes occupied by this cube
+        // Intersect with each previous cube
 
+
+        //// If there is an intersection compute the result
+        //  // if this in ON and prev is ON : add (this.Volume - intersect.Vol)
+        //  // if this in OFF and prev is OFF : nothing to do
+        //  // if this in ON and prev is OFF : nothing to do
+        // ... sounds complicated
+          
+    // Idea 3 :
+    // Divide space along x using all min and max x values of all cubes
+    // Divide space along y using all min and max y values of all cubes
+    // Divide space along z using all min and max z values of all cubes
     let input = getInputPath fileName |> File.ReadAllLines |> Seq.map mapLine |> Seq.toList
-    let (xs,xe) = input |> Seq.map (fun (((xs,_), _, _), _) -> xs) |> Seq.min, input |> Seq.map (fun (((_,xe), _, _), _) -> xe) |> Seq.max
-    let (ys,ye) = input |> Seq.map (fun ((_, (ys,_), _), _) -> ys) |> Seq.min, input |> Seq.map (fun ((_, (_,ye), _), _) -> ye) |> Seq.max
-    let (zs,ze) = input |> Seq.map (fun ((_, _, (zs,_)), _) -> zs) |> Seq.min, input |> Seq.map (fun ((_, _, (_,ze)), _) -> ze) |> Seq.max
-    printfn "X: %A Y: %A Z: %A" (xs,xe) (ys,ye) (zs,ze) 
-    0
+
+    let distinctCubes = input |> chop |> Dump
+    
+    // Use these to divide space in distinct, non-intersecting cubes
+    // Intersect all the non-intersecting cubes with each cube in the input, starting from the end
+    // the first one to intersect gives us the state of the cube
+    let reversedInput = input |> List.rev
+    let volumes = 
+        distinctCubes |> Seq.map (fun c ->
+            match reversedInput |> Seq.tryPick (fun (cuboid, state) -> intersect cuboid c |> Option.map (fun _ -> state)) with
+            | Some onOff ->
+                if onOff then
+                    (vol3 c) |> int64
+                else
+                    0L
+            | _ -> 
+                printfn "No intersection found for %A" c
+                0L
+        )
+    volumes |> Seq.sum
+
+    //let (xs,xe) = input |> Seq.map (fun (((xs,_), _, _), _) -> xs) |> Seq.min, input |> Seq.map (fun (((_,xe), _, _), _) -> xe) |> Seq.max
+    //let (ys,ye) = input |> Seq.map (fun ((_, (ys,_), _), _) -> ys) |> Seq.min, input |> Seq.map (fun ((_, (_,ye), _), _) -> ye) |> Seq.max
+    //let (zs,ze) = input |> Seq.map (fun ((_, _, (zs,_)), _) -> zs) |> Seq.min, input |> Seq.map (fun ((_, _, (_,ze)), _) -> ze) |> Seq.max
+    //printfn "X: %A Y: %A Z: %A" (xs,xe) (ys,ye) (zs,ze) 
+    
 
 sw.Restart()
-let r2 = solve2 "Day22_sample3.txt"
+let r2 = solve2 "Day22_sample1.txt"
 printfn "Day 22 Part 2 sample  : %i. Took %A" r2 sw.Elapsed
 // TODO : filter again for init cubes after reboot proc. Shouldn't be necessary as the coords don't change
