@@ -1,6 +1,4 @@
-﻿
-
-#load "../../Tools.fsx"
+﻿#load "../../Tools.fsx"
 
 open System
 open System.Collections.Generic
@@ -27,19 +25,18 @@ let enumRange (s,e) = seq {
     for i = s to e do yield i
 }
 
-let solve1 fileName = 
-    let input = getInputPath fileName |> File.ReadAllLines |> Seq.map mapLine
-    
+let computeOnCubesWithBruteForce instructions = 
+
     let filterInitializationCubes (instructions:RebootInstruction seq) =
         let inline insideInitBounds (start, endp) = start >= -50 && endp <= 50
         instructions |> Seq.filter (fun ((xr, yr, zr), _) ->
             insideInitBounds xr && insideInitBounds yr && insideInitBounds zr
         )
 
-    let filteredInput = input |> filterInitializationCubes |> Seq.toList
+    let filteredInput = instructions |> filterInitializationCubes |> Seq.toList
 
     let grid = new Dictionary<(int * int * int), bool>()
-    
+ 
     filteredInput 
     |> Seq.iter(fun ((xr,yr,zr), state) -> 
         for x in enumRange xr do
@@ -50,31 +47,35 @@ let solve1 fileName =
 
     grid.Values |> Seq.filter id |> Seq.length
 
+let solve1 fileName = 
+    let input = getInputPath fileName |> File.ReadAllLines |> Seq.map mapLine
+    computeOnCubesWithBruteForce input
 
 assert(solve1 "Day22_Sample1.txt" = 39)
-assert(solve1 "Day22_Sample2.txt" = 590784)
+//assert(solve1 "Day22_Sample2.txt" = 590784)
 let sw = Stopwatch.StartNew()
-let result = solve1 "Day22.txt"
-printfn "Day 22 Part 1 solution : %i. Took %A" result sw.Elapsed
+//let result = solve1 "Day22.txt"
+//printfn "Day 22 Part 1 solution : %i. Took %A" result sw.Elapsed
 
-let intersect (((xs1,xe1),(ys1,ye1),(zs1,ze1)):Cuboid) (((xs2,xe2),(ys2,ye2),(zs2,ze2)):Cuboid) : Cuboid option =
-    let xsr = max xs1 xs2
-    let xer = min xe1 xe2
+let intersect (((min_x1,max_x1),(min_y1,max_y1),(min_z1,max_z1)):Cuboid) (((min_x2,max_x2),(min_y2,max_y2),(min_z2,max_z2)):Cuboid)=
+    let xsr = max min_x1 min_x2
+    let xer = min max_x1 max_x2
     if xsr > xer then
         None
     else
-        let ysr = max ys1 ys2
-        let yer = min ye1 ye2
+        let ysr = max min_y1 min_y2
+        let yer = min max_y1 max_y2
         if ysr > yer then 
             None
         else
-            let zsr = max zs1 zs2
-            let zer = min ze1 ze2
+            let zsr = max min_z1 min_z2
+            let zer = min max_z1 max_z2
             if zsr > zer then
                 None
             else
                 Some ((xsr, xer),(ysr,yer),(zsr,zer))
 
+// Let's make a few (hopefully valid) tests
 assert(intersect ((0,1),(0,1),(0,1)) ((0,2),(0,2),(0,2)) = Some ((0,1),(0,1),(0,1)))
 assert(intersect ((0,2),(0,2),(0,2)) ((0,1),(0,1),(0,1)) = Some ((0,1),(0,1),(0,1)))
 assert(intersect ((-1,2),(-1,2),(-1,2)) ((0,2),(0,2),(0,2)) = Some ((0,2),(0,2),(0,2)))
@@ -84,96 +85,56 @@ assert(intersect ((-2,2),(-2,2),(-2,2)) ((5,5),(-1,1),(-1,1)) = None)
 assert(intersect ((-2,2),(-2,2),(-2,2)) ((-1,1),(-5,-5),(-1,1)) = None)
 assert(intersect ((-2,2),(-2,2),(-2,2)) ((-1,1),(-1,-1),(6,6)) = None)
 
-let chop (instructions: RebootInstruction list) =
+type SignedCuboid = 
+| PositiveCuboid of Cuboid
+| NegativeCuboid of Cuboid
 
-    let xPoints = 
-        instructions 
-        |> Seq.collect (fun (((xs,xe), _, _), _) -> [xs;xe]) 
-        |> Seq.distinct 
-        |> Seq.sort 
-        |> Seq.mapi (fun i v -> if i = 0 then v - 1 else v)
-    let yPoints = 
-        instructions 
-        |> Seq.collect (fun ((_, (ys,ye), _), _) -> [ys;ye]) 
-        |> Seq.distinct 
-        |> Seq.sort 
-        |> Seq.mapi (fun i v -> if i = 0 then v - 1 else v)
-    let zPoints = 
-        instructions 
-        |> Seq.collect (fun ((_, _, (zs,ze)), _) -> [zs;ze]) 
-        |> Seq.distinct 
-        |> Seq.sort 
-        |> Seq.mapi (fun i v -> if i = 0 then v - 1 else v)
+let signedIntersect c1 c2 =
+    match c1, c2 with
+    | PositiveCuboid pc1, PositiveCuboid pc2 -> intersect pc1 pc2 |> Option.map NegativeCuboid
+    | NegativeCuboid nc1, NegativeCuboid nc2 -> intersect nc1 nc2 |> Option.map PositiveCuboid
+    | PositiveCuboid pc1, NegativeCuboid nc2 -> intersect pc1 nc2 |> Option.map PositiveCuboid
+    | NegativeCuboid nc1, PositiveCuboid pc2 -> intersect nc1 pc2 |> Option.map NegativeCuboid
 
-    //printfn "%i pairs on X" (xPoints |> Seq.pairwise |> Seq.length)
-    //printfn "%i pairs on Y" (yPoints |> Seq.pairwise |> Seq.length)
-    //printfn "%i pairs on Z" (zPoints |> Seq.pairwise |> Seq.length)
+let inline vol3 (((xs,xe), (ys,ye), (zs,ze)):Cuboid) = 
+    ((xe-xs+1) |> int64) * ((ye-ys+1)|> int64) * ((ze-zs+1)|> int64)
 
-    seq {
-        for (xs,xe) in xPoints |> Seq.pairwise do
-            for (ys,ye) in yPoints |> Seq.pairwise do
-                for (zs,ze) in zPoints |> Seq.pairwise do
-                    yield ((xs + 1,xe), (ys + 1,ye), (zs + 1,ze)) |> Cuboid
-    }
+let computeOnCubesUsingSignedCubesAlgo instructions =
+    instructions |> Seq.fold (fun cuboids instr ->
+        let ((min_x, max_x), (min_y, max_y), (min_z, max_z)), state = instr
 
-let inline vol3 ((xs,xe),(ys,ye),(zs,ze)) = (xe-xs)*(ye-ys)*(ze-zs)
+        let currentCuboid:Cuboid = (min_x, max_x), (min_y, max_y), (min_z, max_z)
+        let current = 
+            match state with 
+            | true -> currentCuboid |> PositiveCuboid
+            | false -> currentCuboid |> NegativeCuboid
 
-let solve2 fileName = 
-    // Idea 0 :
-    // brute force each pixel, traversing each cube. Not likely
-    // 250000*250000*250000 means millions of billions of cubes
+        let intersections = cuboids |> List.choose (fun cuboid -> signedIntersect current cuboid)
+ 
+        List.concat [cuboids;intersections;(if state then [current] else [])]
+    ) []
+   
+let computeTotalVolume cuboids =
+    let mutable result = 0L
+ 
+    for cuboid in cuboids do
+        match cuboid with
+        | PositiveCuboid c ->
+            result <- result + vol3 c
+        | NegativeCuboid c ->
+            result <- result - vol3 c
+ 
+    result
 
-    // Idea 1 : 
-    //  take the cubes by pairs
-    //  keep non-intersecting cubes
-    //  if intersecting, cut them up in smaller, non-intersecting cubes 
-    //  take all of these and sum the volumes of the ON ones ?
+let getInputForFile fileName = 
+    getInputPath fileName |> File.ReadAllLines |> Seq.map mapLine |> Seq.toList
 
-    // Idea 2 :
-    // Count cubes occupied by first instr
-    // Take next cube, count cubes occupied by this cube
-        // Intersect with each previous cube
+let solve2 = getInputForFile >> computeOnCubesUsingSignedCubesAlgo >> computeTotalVolume
 
-
-        //// If there is an intersection compute the result
-        //  // if this in ON and prev is ON : add (this.Volume - intersect.Vol)
-        //  // if this in OFF and prev is OFF : nothing to do
-        //  // if this in ON and prev is OFF : nothing to do
-        // ... sounds complicated
-          
-    // Idea 3 :
-    // Divide space along x using all min and max x values of all cubes
-    // Divide space along y using all min and max y values of all cubes
-    // Divide space along z using all min and max z values of all cubes
-    let input = getInputPath fileName |> File.ReadAllLines |> Seq.map mapLine |> Seq.toList
-
-    let distinctCubes = input |> chop |> Dump
-    
-    // Use these to divide space in distinct, non-intersecting cubes
-    // Intersect all the non-intersecting cubes with each cube in the input, starting from the end
-    // the first one to intersect gives us the state of the cube
-    let reversedInput = input |> List.rev
-    let volumes = 
-        distinctCubes |> Seq.map (fun c ->
-            match reversedInput |> Seq.tryPick (fun (cuboid, state) -> intersect cuboid c |> Option.map (fun _ -> state)) with
-            | Some onOff ->
-                if onOff then
-                    (vol3 c) |> int64
-                else
-                    0L
-            | _ -> 
-                printfn "No intersection found for %A" c
-                0L
-        )
-    volumes |> Seq.sum
-
-    //let (xs,xe) = input |> Seq.map (fun (((xs,_), _, _), _) -> xs) |> Seq.min, input |> Seq.map (fun (((_,xe), _, _), _) -> xe) |> Seq.max
-    //let (ys,ye) = input |> Seq.map (fun ((_, (ys,_), _), _) -> ys) |> Seq.min, input |> Seq.map (fun ((_, (_,ye), _), _) -> ye) |> Seq.max
-    //let (zs,ze) = input |> Seq.map (fun ((_, _, (zs,_)), _) -> zs) |> Seq.min, input |> Seq.map (fun ((_, _, (_,ze)), _) -> ze) |> Seq.max
-    //printfn "X: %A Y: %A Z: %A" (xs,xe) (ys,ye) (zs,ze) 
-    
+assert(solve2 "Day22_sample1.txt" = 39L)
+assert(solve2 "Day22_sample4.txt" = 46L)
+assert(solve2 "Day22_sample3.txt" = 2758514936282235L)
 
 sw.Restart()
-let r2 = solve2 "Day22_sample1.txt"
-printfn "Day 22 Part 2 sample  : %i. Took %A" r2 sw.Elapsed
-// TODO : filter again for init cubes after reboot proc. Shouldn't be necessary as the coords don't change
+let r2 = solve2 "Day22.txt"
+printfn "Day 22 Part 2 solution : %i. Took %A" r2 sw.Elapsed

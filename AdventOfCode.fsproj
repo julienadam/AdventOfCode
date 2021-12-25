@@ -67,6 +67,9 @@
     <Content Include="Input\2021\Day22_sample1.txt" />
     <Content Include="Input\2021\Day22_sample2.txt" />
     <Content Include="Input\2021\Day22_sample3.txt" />
+    <Content Include="Input\2021\Day22_sample4.txt" />
+    <Content Include="Input\2021\Day22_sample5.txt" />
+    <Content Include="Input\2021\Day22_Sample6.txt" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 
