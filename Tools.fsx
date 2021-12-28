@@ -13,6 +13,10 @@ module SeqEx =
         s |> Seq.take n, s |> Seq.skip n
 
 [<AutoOpen>]
+module TupleTools =
+    let inline swap2 (a,b) = (b,a)
+
+[<AutoOpen>]
 module Distance =
     let manhattanDistance (x1:int) (y1:int) (x2:int) (y2:int) = Math.Abs(x1 - x2) + Math.Abs(y1 - y2)
 
@@ -20,6 +24,13 @@ module Distance =
 module RegexTools =
     let inline mInt (groupName:string) (m:Match) = m.Groups.[groupName].Value |> int
 
+module AStar =
+    type AStarNode<'a> = {
+        F: int64
+        G: int64
+        Data: 'a
+    }
+    
 module Array2DTools =
 
     let getAdjacent row col (grid:'a[,]) = seq {

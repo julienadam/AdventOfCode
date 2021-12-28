@@ -1,194 +1,344 @@
 ﻿#load "../../Tools.fsx"
 
 open System
-open System.Collections.Generic
 open System.Diagnostics
 open System.IO
-open System.Text.RegularExpressions
 open Tools
+open Tools.AStar
 
-type AmphipodType =
-    | Amber = 1
-    | Bronze = 10
-    | Copper = 100
-    | Desert = 1000
+type AmphipodType = | Amber = 1 | Bronze = 10 | Copper = 100  | Desert = 1000
+type Amphipod = { Type: AmphipodType(*; Id: int*) }
 
+// let mutable id = 0;
 let readAmphipod c =
-    match c with 
-    | 'A' -> AmphipodType.Amber
-    | 'B' -> AmphipodType.Bronze
-    | 'C' -> AmphipodType.Copper
-    | 'D' -> AmphipodType.Desert
-    | _ -> failwithf "Invalid amphipod type %c" c
+    // id <- id + 1
+    match c with
+    | 'A' -> { Type = AmphipodType.Amber (*; Id = id*) }
+    | 'B' -> { Type = AmphipodType.Bronze(*; Id = id*) }
+    | 'C' -> { Type = AmphipodType.Copper(*; Id = id*) }
+    | 'D' -> { Type = AmphipodType.Desert(*; Id = id*) }
+    | _ -> failwithf "Invalid amphipod type"
+
+let Left_back = 0
+let Left_front = 1
+let A = 2 
+let A_B = 3
+let B = 4
+let B_C = 5
+let C = 6
+let C_D = 7
+let D = 8
+let Right_front = 9
+let Right_back = 10
+
+type Loc =
+| Corridor of int
+| Room of int * int
+
+type BurrowState = {
+    Locations : Map<Loc, Amphipod>
+    ActiveAmphipods : (Amphipod * Loc) list
+    InactiveAmphipods : (Amphipod * Loc) list
+}
+
+let inline room r d = 
+    if d = 1 || d = 2 then 
+        if r = A || r = B || r = C || r = D then
+            Room (r, d) 
+        else
+            failwithf "Invalid room %i" r
+    else 
+        failwithf "Invalid depth %i" d
+
+// let inline room2 (r,d) = room r d
+
+let inline corridor c =
+    if c >= Left_back && c <= Right_back && c <> A && c <> B && c <> C && c <> D then
+        Corridor c
+    else
+        failwithf "Invalid corridor %i" c
+
+// let inline isColor type' amphipod = amphipod.Type = type'
+let inline isColorOpt type' = 
+    function 
+    | Some a when a.Type = type' -> true 
+    // | Some _ -> failwithf "Trying to find a target to a room occupied by another type of ampthipod"
+    | _ -> false
     
-type Spots =
-    | Corridor_left_back = 0
-    | Corridor_left_front = 1
-    | RoomA_back = 2
-    | RoomA_front = 3
-    | Corridor_A_B = 4
-    | RoomB_back = 5
-    | RoomB_front = 6
-    | Corridor_B_C = 7
-    | RoomC_back = 8
-    | RoomC_front = 9
-    | Corridor_C_D = 10
-    | RoomD_back = 11
-    | RoomD_front = 12
-    | Corridor_right_front = 13
-    | Corridor_right_back = 14
+let getAssignedRoom = 
+    function 
+    | AmphipodType.Amber -> A 
+    | AmphipodType.Bronze -> B 
+    | AmphipodType.Copper -> C
+    | AmphipodType.Desert -> D
+    | _ -> failwithf "Invalid enum value"
+        
+let isInItsPlace loc amphipod (locations:Map<Loc, Amphipod>) =
+    let assigned = getAssignedRoom amphipod
+    match loc with
+    | Room (r, 2) when assigned = r -> true
+    | Room (r, 1) when assigned = r && locations.TryFind (room r 2) |> isColorOpt amphipod -> true
+    | _ -> false
+    
+let getTarget amphipod (locations:Map<Loc, Amphipod>) =
+    let r = getAssignedRoom amphipod
+    if locations.TryFind (room r 2) |> isColorOpt amphipod then 
+        r, 1 
+    else 
+        r, 2
 
-type BurrowState = Map<Spots, AmphipodType> // TODO some sort of builder to check state at creation time
-
+assert(getTarget AmphipodType.Amber Map.empty = (A,2))
+assert(getTarget AmphipodType.Bronze Map.empty = (B,2))
+assert(getTarget AmphipodType.Copper Map.empty = (C,2))
+assert(getTarget AmphipodType.Desert Map.empty = (D,2))
+assert(getTarget AmphipodType.Amber ([(room A 2), { Type = AmphipodType.Amber(*; Id = 0*)}] |> Map.ofSeq) = (A,1))
 
 let getInput fileName = 
     let lines = getInputPath fileName |> File.ReadAllLines 
-    [
-        (Spots.RoomA_front, readAmphipod lines.[2].[3])
-        (Spots.RoomA_back, readAmphipod lines.[3].[3])
-        (Spots.RoomB_front, readAmphipod lines.[2].[5])
-        (Spots.RoomB_back, readAmphipod lines.[3].[5])
-        (Spots.RoomC_front, readAmphipod lines.[2].[7])
-        (Spots.RoomC_back, readAmphipod lines.[3].[7])
-        (Spots.RoomD_front, readAmphipod lines.[2].[9])
-        (Spots.RoomD_back, readAmphipod lines.[3].[9])
-    ] |> Map.ofSeq
+    let map = 
+        [
+            (room A 1, readAmphipod lines.[2].[3])
+            (room A 2, readAmphipod lines.[3].[3])
+            (room B 1, readAmphipod lines.[2].[5])
+            (room B 2, readAmphipod lines.[3].[5])
+            (room C 1, readAmphipod lines.[2].[7])
+            (room C 2, readAmphipod lines.[3].[7])
+            (room D 1, readAmphipod lines.[2].[9])
+            (room D 2, readAmphipod lines.[3].[9])
+        ] |> Map.ofSeq
+    let actAmphipods = 
+        map 
+        |> Map.toSeq 
+        |> Seq.filter (fun (l, a) -> isInItsPlace l a.Type map |> not)
+        |> Seq.map swap2 
+        |> Seq.toList
+    let inactiveAmphipods = 
+        map 
+        |> Map.toSeq 
+        |> Seq.filter (fun (l, a) -> isInItsPlace l a.Type map)
+        |> Seq.map swap2 
+        |> Seq.toList
+    { Locations = map; ActiveAmphipods = actAmphipods; InactiveAmphipods = inactiveAmphipods }
 
-let getAvailableTargetSpots (spot:Spots) =
-    match spot with
-    | Spots.Corridor_left_back   -> [(Spots.Corridor_left_front, 1)]
-    | Spots.Corridor_left_front  -> [(Spots.RoomA_front, 2); (Spots.Corridor_A_B, 2); (Spots.Corridor_left_back, 1) ]
-    | Spots.RoomA_front          -> [(Spots.RoomA_back,1); (Spots.Corridor_left_front,2); (Spots.Corridor_A_B,2) ]
-    | Spots.RoomA_back           -> [(Spots.RoomA_front, 1)]
-    | Spots.Corridor_A_B         -> [(Spots.Corridor_left_front, 2); (Spots.RoomA_front, 2); (Spots.RoomB_front, 2); (Spots.Corridor_B_C, 2) ]
-    | Spots.RoomB_front          -> [(Spots.Corridor_A_B, 2); (Spots.Corridor_B_C, 2); (Spots.RoomB_back, 1)]
-    | Spots.RoomB_back           -> [(Spots.RoomB_front, 1)]
-    | Spots.Corridor_B_C         -> [(Spots.RoomC_front, 2); (Spots.RoomB_front, 2); (Spots.Corridor_A_B, 2); (Spots.Corridor_C_D, 2) ]
-    | Spots.RoomC_front          -> [(Spots.Corridor_C_D, 2); (Spots.Corridor_B_C, 2); (Spots.RoomC_back, 1) ]
-    | Spots.RoomC_back           -> [(Spots.RoomC_front, 1)]
-    | Spots.Corridor_C_D         -> [(Spots.Corridor_B_C, 2); (Spots.RoomC_front, 2); (Spots.RoomD_front, 2); (Spots.Corridor_right_front, 2)]
-    | Spots.RoomD_front          -> [(Spots.Corridor_C_D, 2); (Spots.Corridor_right_front, 2); (Spots.RoomD_back, 1) ]
-    | Spots.RoomD_back           -> [(Spots.RoomD_front, 1)]
-    | Spots.Corridor_right_front -> [(Spots.Corridor_right_back, 1); (Spots.RoomD_front, 2); (Spots.Corridor_C_D, 2)]
-    | Spots.Corridor_right_back  -> [(Spots.Corridor_right_front, 1)]
-    | _ -> failwithf "No reason for this. Invalid enum value"
-
-let getUnoccupiedAvailable spot (burrow:BurrowState) =
-    getAvailableTargetSpots spot |> List.filter (fun (s,_) -> burrow |> Map.containsKey s |> not)
-
-let isInFinalState spot amphipod (burrow:BurrowState) =
-    match amphipod,spot with
-    | AmphipodType.Amber, Spots.RoomA_back -> true
-    | AmphipodType.Amber, Spots.RoomA_front -> burrow.TryFind Spots.RoomA_back = Some AmphipodType.Amber
-    | AmphipodType.Amber, _ -> false
-    | AmphipodType.Bronze, Spots.RoomB_back -> true
-    | AmphipodType.Bronze, Spots.RoomB_front -> burrow.TryFind Spots.RoomB_back = Some AmphipodType.Bronze
-    | AmphipodType.Bronze, _ -> false
-    | AmphipodType.Copper, Spots.RoomC_back -> true
-    | AmphipodType.Copper, Spots.RoomC_front -> burrow.TryFind Spots.RoomC_back = Some AmphipodType.Copper
-    | AmphipodType.Copper, _ -> false
-    | AmphipodType.Desert, Spots.RoomD_back -> true
-    | AmphipodType.Desert, Spots.RoomD_front -> burrow.TryFind Spots.RoomD_back = Some AmphipodType.Desert
-    | AmphipodType.Desert, _ -> false
-    | _ -> failwithf "Invalid amphipod, spot combination"
-
-let computeCost distance (amphipod:AmphipodType) =
-    distance * (amphipod |> int)
-
-let evolveState (burrow:BurrowState) currentCost =
-    burrow |> Seq.collect (fun kvp ->
-        let (spot, amphipod) = kvp.Key,kvp.Value
-        if isInFinalState spot amphipod burrow then
-            []
+let isOrganizedBurrow (burrow:BurrowState) = 
+    if burrow.ActiveAmphipods = [] then
+        // TODO: all amphipods must be in their room
+        if burrow.InactiveAmphipods.Length = 8 then
+            true
         else
-            getUnoccupiedAvailable spot burrow
-            |> List.map (fun (s,distance) ->
-                let nextState = burrow |> Map.remove spot |> Map.add s amphipod
-                let nextCost = currentCost + computeCost distance amphipod
-                (nextState, nextCost)
-            )
+            failwithf "Invariant check failed. Active = 0 but Inactive = %i" burrow.InactiveAmphipods.Length
+    else
+        false
+
+let inline computeCost distance (amphipod:AmphipodType) = distance * (amphipod |> int64)
+let inline isFree spot burrow = burrow |> Map.containsKey spot |> not
+// let inline areFree spots burrow = spots |> Seq.forall (fun s -> isFree s burrow)
+
+let dist loc1 loc2 =
+    match loc1, loc2 with
+    | Corridor ca, Corridor cb -> failwithf "No reason to check Corridor <-> Corridor" //Math.Abs(cb - ca)
+    | Corridor c, Room (r,d) -> Math.Abs(r - c) + d
+    | Room (r,d), Corridor c -> Math.Abs(r - c) + d
+    | Room (r1,d1), Room (r2,d2) when r1 = r2 -> failwithf "No reason to check Room X <-> Room X" //Math.Abs (d2 - d1)
+    | Room (r1,d1), Room (r2,d2) -> failwithf "No reason to check Room X <-> Room Y" // d1 + d2 + Math.Abs (r1 - r2)
+
+assert(dist (corridor 0) (room B 2) = 6)
+assert(dist (room B 2) (corridor 0) = 6)
+assert(dist (corridor 1) (room B 2) = 5)
+assert(dist (room B 2) (corridor 1) = 5)
+assert(dist (corridor 3) (room B 2) = 3)
+assert(dist (room B 2) (corridor 3) = 3)
+assert(dist (corridor 10) (room B 2) = 8)
+assert(dist (room B 2) (corridor 10) = 8)
+assert(dist (corridor 9) (room B 2) = 7)
+assert(dist (room B 2) (corridor 9) = 7)
+
+let absDist loc1 loc2 =
+    match loc1, loc2 with
+    | Corridor ca, Corridor cb -> failwithf "No reason to check Corridor <-> Corridor" // Math.Abs(cb - ca)
+    | Corridor c, Room (r,d) -> Math.Abs(r - c) + d
+    | Room (r,d), Corridor c -> Math.Abs(r - c) + d
+    | Room (r1,d1), Room (r2,d2) when r1 = r2 -> Math.Abs (d2 - d1)
+    | Room (r1,d1), Room (r2,d2) -> d1 + d2 + Math.Abs (r1 - r2)
+
+assert(absDist (room B 2) (room C 1) = 5)
+assert(absDist (room B 1) (room B 2) = 1)
+
+let heuristic (burrow: BurrowState) =
+    // Compute theorical distance if there were no other amphipods on the grid
+    burrow.ActiveAmphipods 
+    |> List.map (fun (amphipod, loc) ->
+        let t = getAssignedRoom amphipod.Type
+        let d = absDist (room t 2) loc 
+        assert (d >= 0) 
+        amphipod.Type, d
+        )
+    |> List.groupBy fst
+    |> List.map (fun (amphipodType, dists) -> 
+        match dists with
+        | [_,d] -> 
+            // The remaining amphipod goes to the front of the room (hence d - 1)
+            assert(d > 1)
+            computeCost ((d |> int64) - 1L) amphipodType
+        | [_,d1; _,d2] ->
+            // When there are still 2 amphipods of the same type, use the closest one to
+            // go to the back of the room in order to minimize the cost
+            let minDist = min d1 d2 |> int64
+            let maxDist = max d1 d2 |> int64
+            assert(maxDist > 0)
+            computeCost minDist amphipodType + computeCost (maxDist - 1L) amphipodType
+        | _ -> 
+            failwithf "Shoud have either one or two amphipods of a given type, got %i" dists.Length
     )
+    |> Seq.sum
+    
+let findFreeSpotInRoom r typ locs =
+    match locs |> Map.tryFind (room r 1), locs |> Map.tryFind (room r 2) with
+    | None, None -> (r, 2) |> Some 
+    | None, Some a when a.Type = typ -> (r,1) |> Some 
+    | _ -> None
 
-let isOrganizedBurrow (burrow:BurrowState) =
-       burrow.TryFind Spots.RoomA_back  = Some AmphipodType.Amber
-    && burrow.TryFind Spots.RoomA_front = Some AmphipodType.Amber
-    && burrow.TryFind Spots.RoomB_back  = Some AmphipodType.Bronze
-    && burrow.TryFind Spots.RoomB_front = Some AmphipodType.Bronze
-    && burrow.TryFind Spots.RoomC_back  = Some AmphipodType.Copper
-    && burrow.TryFind Spots.RoomC_front = Some AmphipodType.Copper
-    && burrow.TryFind Spots.RoomD_back  = Some AmphipodType.Desert
-    && burrow.TryFind Spots.RoomD_front = Some AmphipodType.Desert
+let findFreeRoom c target typ locs =
+    // TODO: get rid of the mutables ?
+    let mutable blocked = false
+    let mutable x = c
+    let mutable result = None
+    if c < target then
+        while (not blocked && x < target) do
+            x <- x + 1
+            if x % 2 = 1 && locs |> isFree (corridor x) |> not then
+                blocked <- true
+            if x = target then
+                result <- findFreeSpotInRoom x typ locs
+    else if c > target then
+        while (not blocked && x > target) do
+            x <- x - 1
+            if x % 2 = 1 && locs |> isFree (corridor x) |> not then
+                blocked <- true
+            if x = target then
+                result <- findFreeSpotInRoom x typ locs
+    else 
+        failwithf "Invariant failure : target at same coords as corridor spot"
+    result
+    
+let findFreeCorridorsRight roomPos locs = seq {
+    let mutable blocked = false
+    let mutable x = roomPos
+    while (not blocked && x < Right_back) do
+        x <- x + 1
+        if x % 2 = 1 then // Corridor
+            if locs |> isFree (corridor x) |> not then
+                blocked <- true
+            else 
+                yield corridor x
+}
+    
+let findFreeCorridorsLeft roomPos locs = seq {
+    let mutable blocked = false
+    let mutable x = roomPos
+    while (not blocked && x > Left_back) do
+        x <- x - 1
+        if x % 2 = 1 then // Corridor
+            if locs |> isFree (corridor x) |> not then
+                blocked <- true
+            else 
+                yield corridor x
+}
+        
+let getUnoccupiedAvailable spot amphipod burrow = seq {
+    match spot with
+    | Corridor c ->
+        let target, _ = getTarget amphipod.Type burrow.Locations
+        // Is the target room available ?
+        match findFreeRoom c target amphipod.Type burrow.Locations with
+        | Some (r,d) ->
+            let roomSpot = room r d
+            yield roomSpot, dist roomSpot spot |> int64
+        | None -> ()
+    | Room (r, _) ->
+        // Room to corridor
+        yield! findFreeCorridorsRight r burrow.Locations |> Seq.map (fun loc -> loc, dist spot loc |> int64)
+        yield! findFreeCorridorsLeft r burrow.Locations |> Seq.map (fun loc -> loc, dist spot loc |> int64)
+}
 
-let solve1 (burrow:BurrowState) =
-    let mutable counter = 0
-    let mutable openPaths = 0
-    let mutable closedPaths = 0
-    let mutable successfulPaths = 0
-    let mutable minCost = None
-    let visited = new Dictionary<BurrowState, int>()
-
-    let rec solve (burrow:BurrowState) currentCost =
-        counter <- counter + 1
-        if counter % 10000 = 0 then
-            printfn "Iteration %i. Open paths %i. Closed paths %i. Successful paths %i" counter openPaths closedPaths successfulPaths
-        match minCost with
-        | Some c when currentCost > c -> 
-            closedPaths <- closedPaths + 1
-            None
-        | _ ->
-            match visited.TryGetValue burrow with
-            | true, c when currentCost > c -> 
-                closedPaths <- closedPaths + 1
-                None
-            | _ ->
-                visited.[burrow] <- currentCost
-                if isOrganizedBurrow burrow then
-                    if (not minCost.IsSome) || (currentCost < minCost.Value) then
-                        printfn "Found new best cost %i" currentCost
-                        minCost <- Some currentCost
-                        successfulPaths <- successfulPaths + 1
-                        Some currentCost
-                    else
-                        closedPaths <- closedPaths + 1
-                        None
+let getNextStates (burrow:BurrowState) : (BurrowState * int64) list =
+    burrow.ActiveAmphipods
+    |> Seq.collect (fun (amphipod, oldLoc) ->
+        getUnoccupiedAvailable oldLoc amphipod burrow
+        |> Seq.map (fun (newLoc, distance) ->
+            let nextMap = burrow.Locations |> Map.remove oldLoc |> Map.add newLoc amphipod
+            
+            // If the new location is the target location, update the active / inactive list
+            let nextState = 
+                if isInItsPlace newLoc amphipod.Type burrow.Locations then
+                    { 
+                        burrow with 
+                            Locations = nextMap
+                            ActiveAmphipods = burrow.ActiveAmphipods |> List.except [amphipod, oldLoc]
+                            InactiveAmphipods = (amphipod, newLoc)::burrow.InactiveAmphipods
+                    }
                 else
-                    let nextStages = evolveState burrow currentCost |> Seq.toList
-                    openPaths <- openPaths + nextStages.Length
-                    let solvedNextStages =
-                        nextStages 
-                        |> List.choose (fun (nextBurrow, nextCost) -> solve nextBurrow nextCost)
-                    if solvedNextStages.Length > 0 then
-                        solvedNextStages |> List.min  |> Some
-                    else
-                        None
-
-    solve burrow 0
-
-let startSituation = getInput "Day23_sample1.txt"
-solve1 startSituation
-
-// Expected : 12501
-
-(*
-Problem space :
-4 rooms with a back and a front, 8 spots total
-2 rooms with a back and front, one on the A side, one on the D side, 4 spots total
-3 corridor spots named AB, BC, CD
-8 amphipods, by pairs
+                    { 
+                        burrow with 
+                            Locations = nextMap
+                            ActiveAmphipods = (amphipod, newLoc)::(burrow.ActiveAmphipods |> List.except [amphipod, oldLoc])
+                    }
             
-// Puzzle representation
-#############
-#...........#
-###B#C#B#D###
-  #A#D#C#A#  
-  #########  
+            (nextState, computeCost distance amphipod.Type)
+        )
+    )
+    |> Seq.toList
+
+let rec pathfindingAStarRec (openNodes:AStarNode<BurrowState> list) (closedNodes:Set<BurrowState>) =
+    match openNodes with
+    | [] -> failwithf "No path found"
+    | _ -> 
+        let bestNode = openNodes |> Seq.minBy (fun n -> n.F)
+        // printfn "Selecting state %A" bestNode.Data
+        //let sw = Stopwatch.StartNew()
+        let isFinalState = isOrganizedBurrow bestNode.Data
+        //printfn "Final state checking took %A" sw.Elapsed
+        if isFinalState then
+            printfn "Found optimal path with cost %i" bestNode.G
+            bestNode.G
+        else
+            let closed = Set.add bestNode.Data closedNodes 
+            let remainingOpenNodes = openNodes |> List.filter (fun n -> n <> bestNode)
+    
+            //sw.Restart()
+            let adjacentNonClosed = 
+                getNextStates bestNode.Data 
+                |> List.filter (fun (newNode,_) -> closedNodes |> Set.contains newNode |> not)
+            //printfn "Finding next nodes took %A" sw.Elapsed
             
-// Graph representation
-CA2-CA1--SAB--SBC--SCD--CD1-CD2
-        \   / \  / \  / \   /
-        \ /   \/   \/   \ /
-        RA1  RB1   RC1  RD1
-        |    |     |    |
-        RA2  RB2   RC2  RD2
-            
-*)
+            // printfn "Found %i possible targets" adjacentNonClosed.Length
+
+            let nextOpenNodes = 
+                adjacentNonClosed 
+                |> List.choose (fun (newNode, cost) ->
+                    // Calculate total cost of new node
+                    let g = bestNode.G + cost
+
+                    // Heuristic cost towards final state
+                    //sw.Restart()
+                    let h = heuristic newNode
+                    //printfn "Heuristic took %A" sw.Elapsed
+                    if h < 0 then
+                        failwithf "Invariant failure : heuristic is negative. %i" h
+                    // printfn "Heuristic %i" h
+                    
+                    // If this state already exists with a lower cost, skip it
+                    match openNodes |> List.tryFind (fun n -> n.Data = newNode && g > n.G) with
+                    | Some _ -> None
+                    | _ -> Some { Data = newNode; F = h + g; G = g }
+                )
+                
+            let nextOpen = List.concat [nextOpenNodes; remainingOpenNodes]
+            pathfindingAStarRec nextOpen closed 
+
+//let startSituation = 
+assert(pathfindingAStarRec [{ Data = getInput "Day23_sample2.txt"; G = 0; F = 0 }] Set.empty = 46L)
+
+let sw = Stopwatch.StartNew()
+let result = pathfindingAStarRec [{ Data = getInput "Day23.txt"; G = 0; F = 0 }] Set.empty
+printfn "Part 1 solution : %i. Found in %A" result sw.Elapsed
