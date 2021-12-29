@@ -1,80 +1,12 @@
-﻿open System
-open System.IO
-open System.Text.RegularExpressions
+﻿#load "../../Tools.fsx"
+#time "on"
 
-let getInputPath file = Path.Combine(__SOURCE_DIRECTORY__, "Input", "2021", file)
-
-let Dump obj =
-    printfn "%A" obj
-    obj
-
-module SeqEx =
-    let read n s =
-        s |> Seq.take n, s |> Seq.skip n
-
-[<AutoOpen>]
-module TupleTools =
-    let inline swap2 (a,b) = (b,a)
-
-[<AutoOpen>]
-module Distance =
-    let manhattanDistance (x1:int) (y1:int) (x2:int) (y2:int) = Math.Abs(x1 - x2) + Math.Abs(y1 - y2)
-
-[<AutoOpen>]
-module RegexTools =
-    let inline mInt (groupName:string) (m:Match) = m.Groups.[groupName].Value |> int
-
-module AStar =
-    type AStarNode<'a> = {
-        F: int64
-        G: int64
-        Data: 'a
-    }
-    
-module Array2DTools =
-
-    let getAdjacent row col (grid:'a[,]) = seq {
-        if row > 0 then
-            yield ((row - 1), col, grid.[(row - 1), col])
-        if row < ((grid |> Array2D.length1) - 1) then
-            yield ((row + 1), col, grid.[(row + 1), col])
-        if col > 0 then
-            yield (row, (col - 1), grid.[row, (col - 1)])
-        if col < ((grid |> Array2D.length2) - 1) then
-            yield (row, (col + 1), grid.[row, (col + 1)])
-    }
-    
-    let getAdjacentWithDiagonals row col (grid:'a[,]) = seq {
-        yield! getAdjacent row col (grid:'a[,])
-        if row > 0 && col < ((grid |> Array2D.length2) - 1) then
-            yield ((row - 1), (col + 1), grid.[(row - 1), (col + 1)])
-        if row <((grid |> Array2D.length1) - 1) && col > 0 then
-            yield ((row + 1), (col - 1), grid.[(row + 1), (col - 1)])
-        if row <((grid |> Array2D.length1) - 1) && col < ((grid |> Array2D.length2) - 1) then
-            yield ((row + 1), (col + 1), grid.[(row + 1), (col + 1)])
-    }
-
-    let enumArray2d (array:'a[,]) = seq {
-        for i = 0 to (array |> Array2D.length1) - 1 do
-            for j = 0 to (array |> Array2D.length2) - 1 do
-                yield i,j, array.[i,j]
-    }
-
-    let printGrid (grid:'a[,]) =
-        for i in [0..grid.GetLength(0) - 1] do
-            for j in [0..grid.GetLength(1) - 1] do
-                printf "%O" grid.[i,j]
-                if j % 10 = 9 then
-                    printf " "
-            printfn ""
-            if i % 10 = 9 then
-                printfn ""
-        
 open System
 open System.Diagnostics
 open System.Collections.Generic
 open System.IO
-open AStar
+open Tools
+open Tools.AStar
 
 type Amphipod = 
     // | Amber = 1 | Bronze = 10 | Copper = 100  | Desert = 1000
@@ -425,19 +357,14 @@ let rec pathfindingAStarRec (openNodes:Dictionary<BurrowArrayState, AStarNode<Bu
             //let nextOpen = Seq.concat [nextOpenNodes ; remainingOpenNodes]
             pathfindingAStarRec openNodes closed 
 
+let solve1 () = 
+    let input = getInput 2 "Day23.txt"
+    let d = new Dictionary<BurrowArrayState, AStarNode<BurrowArrayState>>()
+    d.Add(input, { Data = input; G = 0; F = 0 })
+    pathfindingAStarRec d Set.empty
 
-//assert(Part1.pathfindingAStarRec [{ Data = Part1.getInput "Day23_sample2.txt"; G = 0; F = 0 }] Set.empty = 46L)
-
-//let sw = Stopwatch.StartNew()
-//printfn "Starting"
-//let result = Part1.pathfindingAStarRec [{ Data = Part1.getInput "Day23.txt"; G = 0; F = 0 }] Set.empty
-//printfn "Part 1 solution : %i. Found in %A" result sw.Elapsed
-
-//let expected = 44169
-
-let sw = Stopwatch.StartNew()
-let input = getInput 4 "Day23.txt"
-let d = new Dictionary<BurrowArrayState, AStarNode<BurrowArrayState>>()
-d.Add(input, { Data = input; G = 0; F = 0 })
-let result = pathfindingAStarRec d Set.empty
-printfn "Part 1 solution : %i. Found in %A" result sw.Elapsed
+let solve2 () =
+    let input = getInput 4 "Day23.txt"
+    let d = new Dictionary<BurrowArrayState, AStarNode<BurrowArrayState>>()
+    d.Add(input, { Data = input; G = 0; F = 0 })
+    pathfindingAStarRec d Set.empty
