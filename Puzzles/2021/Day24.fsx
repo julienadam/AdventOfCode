@@ -49,72 +49,79 @@ let mapLine (l:string) =
     
 let mapAluInstructions input = input |> Seq.map mapLine |> Seq.toList
 
-let rec aluInterpreterRec inputs instructions vars =
-    let inline getOperandValue (vars: int[]) =
-        function
-        | Variable v2 -> vars.[v2 |> int]
-        | Const x -> x
+type ALU = int64 -> Inst list -> int[]
 
-    let inline apply v1 operation operand vars = 
-        let v1Int = v1 |> int
-        let b = getOperandValue vars operand
-        let a = vars.[v1Int]
-        vars.[v1Int] <- operation a b
-        vars
+module AluInterpreter =
 
-    // Special case as we need to check the operands
-    let inline applyMod v1 operand (vars: int[]) = 
-        let v1Int = v1 |> int
-        let a = vars.[v1Int]
-        if a < 0 then
-            failwithf "Left operand for %% op is negative: %i" a
-        let b = getOperandValue vars operand
-        if b <= 0 then
-            failwithf "Right operand for %% op is <=0 : %i" b
+    let rec aluInterpreterRec (input:int64) (divisor:int64) instructions (vars:int[]) =
+        let inline getOperandValue (vars: int[]) =
+            function
+            | Variable v2 -> vars.[v2 |> int]
+            | Const x -> x
 
-        vars.[v1Int] <- a % b
-        vars
+        let inline apply (v1:Var) operation operand vars = 
+            let v1Int = v1 |> int
+            let b = getOperandValue vars operand
+            let a = vars.[v1Int]
+            vars.[v1Int] <- operation a b
+            vars
 
-    let inline eql a b = if a = b then 1 else 0
+        // Special case as we need to check the operands
+        let inline applyMod (v1:Var) operand (vars: int[]) = 
+            let v1Int = v1 |> int
+            let a = vars.[v1Int]
+            if a < 0 then
+                failwithf "Left operand for %% op is negative: %i" a
+            let b = getOperandValue vars operand
+            if b <= 0 then
+                failwithf "Right operand for %% op is <=0 : %i" b
 
-    match instructions with
-    | [] -> vars
-    | inst :: instrTail ->
-        match inst, inputs with
-        | Inp v, input::inputTail -> 
-            Array.set vars (v |> int) input
-            aluInterpreterRec inputTail instrTail vars 
-        | Add (v1, op), _ -> aluInterpreterRec inputs instrTail (vars |> apply v1 (+) op )
-        | Mul (v1, op), _ -> aluInterpreterRec inputs instrTail (vars |> apply v1 (*) op )
-        | Div (v1, op), _ -> aluInterpreterRec inputs instrTail (vars |> apply v1 (/) op )
-        | Mod (v1, op), _ -> aluInterpreterRec inputs instrTail (vars |> applyMod v1 op )
-        | Eql (v1, op), _ -> aluInterpreterRec inputs instrTail (vars |> apply v1 eql op )
-        | _ -> failwithf "Invalid instruction %A" inst
+            vars.[v1Int] <- a % b
+            vars
 
-let aluInterpreter inputs instructions = aluInterpreterRec inputs instructions [|0;0;0;0|]
+        let inline eql a b = if a = b then 1 else 0
+
+        match instructions with
+        | [] -> vars
+        | inst :: instrTail ->
+            match inst with
+            | Inp v -> 
+                if divisor = 0L then
+                    failwithf "Divisor is 0, happens if we read too many inputs"
+                Array.set vars (v |> int) ((input / divisor) |> int)
+                aluInterpreterRec (input % divisor) (divisor / 10L) instrTail vars 
+            | Add (v1, op) -> aluInterpreterRec input divisor instrTail (vars |> apply v1 (+) op )
+            | Mul (v1, op) -> aluInterpreterRec input divisor instrTail (vars |> apply v1 (*) op )
+            | Div (v1, op) -> aluInterpreterRec input divisor instrTail (vars |> apply v1 (/) op )
+            | Mod (v1, op) -> aluInterpreterRec input divisor instrTail (vars |> applyMod v1 op )
+            | Eql (v1, op) -> aluInterpreterRec input divisor instrTail (vars |> apply v1 eql op )
+
+    let aluInterpreter input instructions = 
+        let div = if input.ToString().Length = 1 then 1L else 10L*((input.ToString().Length |> int64) - 1L)
+        aluInterpreterRec input div instructions [|0;0;0;0|]
 
 module Tests = 
 
     let testMod alu =
         let modInstr = ["inp x"; "mod x 2" ] |> mapAluInstructions
-        assert(alu [4] modInstr = [|0;0;0;0|])
-        assert(alu [3] modInstr = [|0;1;0;0|])
+        assert(alu 4L modInstr = [|0;0;0;0|])
+        assert(alu 3L modInstr = [|0;1;0;0|])
     
         try
-            let modOnNegA = ["inp x"; "mod x 2" ] |> mapAluInstructions
-            alu [-1] modOnNegA |> ignore
+            let modOnNegA = ["inp x"; "add x -1"; "mod x 2" ] |> mapAluInstructions
+            alu 0L modOnNegA |> ignore
             assert(false)
         with _ -> ()
     
         try
             let modOnNegB = ["inp x"; "mod x -2" ] |> mapAluInstructions
-            alu [2] modOnNegB |> ignore
+            alu 2L modOnNegB |> ignore
             assert(false)
         with _ -> ()
 
         try
             let modOnZeroB = ["inp x"; "mod x 0" ] |> mapAluInstructions
-            alu [2] modOnZeroB |> ignore
+            alu 2L modOnZeroB |> ignore
             assert(false)
         with _ -> ()
 
@@ -126,9 +133,9 @@ module Tests =
         number is three times larger than the first input number, or sets z to 0 otherwise:
         *)
         let alu3Instrs = ["inp z"; "inp x"; "mul z 3"; "eql z x" ] |> mapAluInstructions
-        assert(alu [1; 3] alu3Instrs = [|0; 3; 0; 1|])
-        assert(alu [1; 4] alu3Instrs = [|0; 4; 0; 0|])
-        assert(alu [-2; -6] alu3Instrs = [|0; -6; 0; 1|])
+        assert(alu 13L alu3Instrs = [|0; 3; 0; 1|])
+        assert(alu 14L alu3Instrs = [|0; 4; 0; 0|])
+        //assert(alu [-2; -6] alu3Instrs = [|0; -6; 0; 1|])
     
     let testDecompBits alu = 
         (*
@@ -137,41 +144,31 @@ module Tests =
         bit in x, and the fourth-lowest (8's) bit in w:
         *)
         let aluDecompBits = ["inp w"; "add z w"; "mod z 2"; "div w 2"; "add y w"; "mod y 2"; "div w 2"; "add x w"; "mod x 2"; "div w 2"; "mod w 2"] |> mapAluInstructions
-        assert(alu [15] aluDecompBits = [|1; 1; 1; 1|])
-        assert(alu [0] aluDecompBits = [|0; 0; 0; 0|])
-        assert(alu [1] aluDecompBits = [|0; 0; 0; 1|])
-        assert(alu [2] aluDecompBits = [|0; 0; 1; 0|])
-        assert(alu [4] aluDecompBits = [|0; 1; 0; 0|])
-        assert(alu [8] aluDecompBits = [|1; 0; 0; 0|])
+        assert(alu 9L aluDecompBits = [|1; 0; 0; 1|])
+        assert(alu 0L aluDecompBits = [|0; 0; 0; 0|])
+        assert(alu 1L aluDecompBits = [|0; 0; 0; 1|])
+        assert(alu 2L aluDecompBits = [|0; 0; 1; 0|])
+        assert(alu 4L aluDecompBits = [|0; 1; 0; 0|])
+        assert(alu 8L aluDecompBits = [|1; 0; 0; 0|])
     
-Tests.testMod aluInterpreter
-Tests.test3Times aluInterpreter
-Tests.test3Times aluInterpreter
-Tests.testDecompBits aluInterpreter
+Tests.testMod AluInterpreter.aluInterpreter
+Tests.test3Times AluInterpreter.aluInterpreter
+Tests.test3Times AluInterpreter.aluInterpreter
+Tests.testDecompBits AluInterpreter.aluInterpreter
     
+// Well, this isn't going to work, at all. Assuming a 4GHz CPU, 99.999.999.999.999 number to check would mean
+// So, about 10 months if the whole check could be done in a single CPU cycle, which it definitely is NOT.
+(99_999_999_999_999L / 4_000_000L) / 60L / 60L / 24L // 289 days
+// The first digit can be ignored, since it has no bearing on the output (for my input) so in fact that would be :
+(9_999_999_999_999L / 4_000_000L) / 60L / 60L / 24L // 28 days
+
 getInputPath "day24.txt" |> File.ReadAllLines |> mapAluInstructions
-
-//TODO: This will probably be critical for perf, bench and optimize it ?
-//let inline longTo14Digits (i:int64) = 
-//    let mutable nb = 0
-//    let out = [|0;0;0;0;0;0;0;0;0;0;0;0;0;0|]
-    
-//    let mutable n = i
-//    while (n > 0L) do
-//        out.[nb] <- (n % 10L) |> int
-//        nb <- nb + 1
-//        n <- n / 10L
-    
-//    out |> Array.rev |> Array.toList
-
-//assert(longTo14Digits 123L = [0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 0; 1; 2; 3])
-
 
 let aluInstructions = getInputPath "day24.txt" |> File.ReadAllLines |> mapAluInstructions
 
-let isValidSerialNumber input =
+let isValidSerialNumber (alu:ALU) input =
     try
-        let result = aluInterpreter input aluInstructions
+        let result = alu input aluInstructions
         if result.[0] <> 0 && result.[1] <> 0 && result.[2] <> 0 && result.[2] <> 0 then
             Some input
         else
@@ -179,36 +176,28 @@ let isValidSerialNumber input =
     with _ ->
         None
 
-let genSerialNumbers () = seq {
-    // Lots of allocations but should be fast enough
-    for d1 = 9 downto 0 do
-        printfn "Foo"
-        for d2 = 9 downto 0 do
-            for d3 = 9 downto 0 do
-                for d4= 9 downto 0 do
-                    for d5 = 9 downto 0 do
-                        for d6 = 9 downto 0 do
-                            for d7 = 9 downto 0 do  
-                                for d8 = 9 downto 0 do
-                                    for d9 = 9 downto 0 do
-                                        for d10 = 9 downto 0 do
-                                            for d11 = 9 downto 0 do
-                                                for d12 = 9 downto 0 do
-                                                    for d13 = 9 downto 0 do
-                                                        for d14 = 9 downto 0 do
-                                                            yield [d1;d2;d3;d4;d5;d6;d7;d8;d9;d10;d11;d12;d13;d14]
+let genSerialNumbers (upperBound:int64) = seq {
+    let mutable i = upperBound
+    while i > 0 do
+        yield i
+        //if i % 100000L = 0L then
+        //    printfn "%i" i
+        i <- i - 1L
 }
 
-genSerialNumbers () |> Seq.last
+genSerialNumbers 99_999_999_999_999L |> Seq.last
 
-let solve1 alu = 
-    let result = genSerialNumbers () |> Seq.pick isValidSerialNumber
+let solve1 alu max = 
+    let result = genSerialNumbers max |> Seq.tryPick (isValidSerialNumber alu)
     printfn "%A" result
 
-solve1 aluInterpreter
-
-
-    
-
+solve1 AluInterpreter.aluInterpreter 999999L
 
 // TODO Transform instructions into a compiled F# expression ? Should be orders of mag faster ?
+
+let i1 = 9
+let i2 = 9
+let i3 = 9
+let i4 = 9
+(((((i1 + 8) * 26 + i2 + 8) % 26) + 13 + i3 + 3) * 26 + i4 + 10) % 26
+i4 + 10
