@@ -53,7 +53,7 @@ let mapAluInstructions input = input |> Seq.map mapLine |> Seq.toList
 type Operator = | Plus | Multiply | Divide | Modulo
     
 type Equation = 
-    | Constant of int
+    | Constant of int64
     | Input of int
     | Operation of Equation * Operator * Equation
 
@@ -85,7 +85,7 @@ let rec getInputUsed eq used =
     | Operation (eq1, _, eq2) ->
         Set.union (getInputUsed eq1 used) (getInputUsed eq2 used)
 
-let rec evaluate eq (vars:int[]) =
+let rec evaluate eq (vars:int64[]) =
     match eq with
     | Input i -> vars.[i]
     | Constant c -> c
@@ -98,33 +98,26 @@ let rec evaluate eq (vars:int[]) =
     | Operation (eq1, Modulo, eq2) ->
         (evaluate eq1 vars) % (evaluate eq2 vars)
 
-let isPossibleDigit1 eq (index:int) =
-    [0..9] |> Seq.exists (fun i ->
-        let vars = [|0;0;0;0;0;0;0;0;0;0;0;0;0;0|] 
-        Array.set vars index i
-        let evaluation = evaluate eq vars
-        evaluation >= 0 && evaluation <= 9
-    )
-
-let isPossibleDigit2 eq (index1:int) (index2:int) =
-    Seq.allPairs [0..9] [0..9]
-    |> Seq.exists (fun (i1,i2) ->
-        let vars = [|0;0;0;0;0;0;0;0;0;0;0;0;0;0|] 
-        Array.set vars index1 i1
-        Array.set vars index2 i2
-        let evaluation = evaluate eq vars
-        evaluation >= 0 && evaluation <= 9
-    )
-
-//let isPossibleDigit3 eq (index1:int) (index2:int) (index3:int)=
-//    Seq.allPairs [0..9] [0..9] 
-//    |> Seq.exists (fun (i1,i2) ->
-//        let vars = [|0;0;0;0;0;0;0;0;0;0;0;0;0;0|] 
-//        Array.set vars index1 i1
-//        Array.set vars index2 i2
-//        let evaluation = evaluate eq vars
-//        evaluation >= 0 && evaluation <= 9
-//    )
+let rec determineMinMax eq =
+    match eq with
+    | Input _ -> (0L, 9L)
+    | Constant c -> (c,c)
+    | Operation (eq1, Plus, eq2) ->
+        let lMin,lMax = determineMinMax eq1
+        let rMin,rMax = determineMinMax eq2
+        (lMin + rMin), (lMax + rMax)
+    | Operation (eq1, Divide, eq2) ->
+        let lMin,lMax = determineMinMax eq1
+        let rMin,rMax = determineMinMax eq2
+        (lMin / rMin), (lMax / rMax)
+    | Operation (eq1, Multiply, eq2) ->
+        let lMin,lMax = determineMinMax eq1
+        let rMin,rMax = determineMinMax eq2
+        (lMin * rMin), (lMax * rMax)
+    | Operation (eq1, Modulo, Constant x) ->
+        let lMin,lMax = determineMinMax eq1
+        ((if lMin > x || lMax > x then 0 else lMin), min x lMax)
+    | _ -> failwithf "Unsupported min max op"
 
 let checkEqualityCandidates (left:Equation) (right:Equation) =
     match left, right with
@@ -137,19 +130,16 @@ let checkEqualityCandidates (left:Equation) (right:Equation) =
     | Constant a, Input _ when a >= 10 || a < 0 ->
         ConditionSolution.AlwaysDifferent
     | eq1, Input _ ->
-        let inputs = getInputUsed eq1 Set.empty |> Seq.toList
-
-        if inputs.Length = 1 && ((isPossibleDigit1 eq1 inputs.[0]) |> not) then
-            ConditionSolution.AlwaysDifferent
-        else if inputs.Length = 2 && ((isPossibleDigit2 eq1 inputs.[0] inputs.[1]) |> not) then
+        let eMin, eMax = determineMinMax eq1
+        if eMin > 9 || eMax < 0 then
+            // printfn "%s has min max : [%i,%i]" (printEquation eq1) eMin eMax
             ConditionSolution.AlwaysDifferent
         else    
             ((AreEqual(left, right), []), (AreDifferent(left, right), [])) |> EqualIf 
-    | eq1, Constant _ ->
-        ((AreEqual(left, right), []), (AreDifferent(left, right), [])) |> EqualIf 
+    | _ -> 
+        failwithf "Equality case not supported"
 
-
-let apply index instr ((expansion, condition):Equation[] * Condition list) =
+let apply index instr ((expansion, condition):Equation[] * Condition list) = seq {
     let getOperandValue =
         function
         | Variable v -> expansion.[v |> int]
@@ -159,75 +149,90 @@ let apply index instr ((expansion, condition):Equation[] * Condition list) =
     | Inp v ->
         let vInt = v |> int
         expansion.[vInt] <- index |> Input
-        [expansion, condition]
+        yield expansion, condition
     | Add (v,a) ->
         let vInt = v |> int
         let aVal = getOperandValue a
         match expansion.[vInt], aVal with
-        | Constant 0, _             -> expansion.[vInt] <- aVal
-        | _, Constant 0             -> ()
+        | Constant 0L, _            -> expansion.[vInt] <- aVal
+        | _, Constant 0L            -> ()
         | Constant a, Constant b    -> expansion.[vInt] <- Constant (a + b)
         | _                         -> expansion.[vInt] <- Operation (expansion.[vInt], Plus, aVal)
-        [expansion, condition]
+        yield expansion, condition
     | Mul (v,a) ->
         let vInt = v |> int
         let aVal = getOperandValue a
-        if aVal = Constant 0 || expansion.[vInt] = Constant 0 then
-            expansion.[vInt] <- Constant 0
-        else if aVal <> Constant 1 then
+        if aVal = Constant 0L || expansion.[vInt] = Constant 0L then
+            expansion.[vInt] <- Constant 0L
+        else if aVal <> Constant 1L then
             expansion.[vInt] <- Operation (expansion.[vInt], Multiply, aVal)
-        [expansion, condition]
+        yield expansion, condition
     | Mod (v,a) ->
         let vInt = v |> int
-        if expansion.[vInt] = Constant 0 then // 0 mod x = 0
-            [expansion, condition]
+        if expansion.[vInt] = Constant 0L then // 0 mod x = 0
+            yield expansion, condition
         else
             let aVal = getOperandValue a
-            // Check rightside >= 0 and leftside > 0 ?
-            expansion.[vInt] <- Operation (expansion.[vInt], Modulo, aVal)
-            [expansion, condition]
+            // Simplify ((a * x) + b) % x) to b
+            match expansion.[vInt], aVal with
+            | Operation (Operation (a, Multiply, Constant c1), Plus, b), Constant c2 when c1 = c2 ->
+                // printfn "Simplifying %s %% %i to %s" (printEquation expansion.[vInt]) c2 (printEquation b)
+                expansion.[vInt] <- b
+                yield expansion, condition
+            | _ -> 
+                // Check rightside >= 0 and leftside > 0 ?
+                expansion.[vInt] <- Operation (expansion.[vInt], Modulo, aVal)
+                yield expansion, condition
     | Div (v,a) ->
         let vInt = v |> int
         let aVal = getOperandValue a
-        if aVal = Constant 0 then
+        if aVal = Constant 0L then
             failwithf "Division by zero"
-        else if aVal <> Constant 1 then // div by one is noop
+        else if aVal <> Constant 1L then // div by one is noop
             expansion.[vInt] <- Operation (expansion.[vInt], Divide, aVal)
-        [expansion, condition]
+        yield expansion, condition
     | Eql (v,a) ->
         let vInt = v |> int
         let aVal = getOperandValue a
         match checkEqualityCandidates expansion.[vInt] aVal with
         | AlwaysEqual ->
-            expansion.[vInt] <- Constant 1
-            [expansion, condition]
+            expansion.[vInt] <- Constant 1L
+            yield expansion, condition
         | AlwaysDifferent -> 
-            expansion.[vInt] <- Constant 0
-            [expansion, condition]
+            expansion.[vInt] <- Constant 0L
+            yield expansion, condition
         | EqualIf ((condEqual, valuesEqual), (condDiff, valuesDiff)) ->
+            // TODO: Order this so that the biggest values are evaluated first
             let e1 = expansion |> Array.copy
+            e1.[vInt] <- Constant 1L
+            yield (e1, condEqual :: condition)
+            
             let e2 = expansion |> Array.copy
-            e1.[vInt] <- Constant 1
-            e1.[vInt] <- Constant 0
-            [(e1, condEqual :: condition); (e2, condDiff :: condition)]
+            e2.[vInt] <- Constant 0L
+            yield (e2, condDiff :: condition)
+}
 
 let rec expand index instructions expansions =
     match instructions with
     | [] -> expansions
     | instr::instrTail ->
-        printfn "instruction : %A. Expansions : %i. Index %i" instr (expansions |> List.length) index
-        let nextExpansions = expansions |> List.collect (fun e -> apply index instr e)
+        let nextExpansions = expansions |> Seq.collect (fun e -> apply index instr e)
         let nextI = match instr with | Inp _ -> index + 1 | _ -> index
         expand nextI instrTail nextExpansions
 
-let initialState () = [[|Constant 0; Constant 0; Constant 0; Constant 0|], []]
+let initialState () = [[|Constant 0L; Constant 0L; Constant 0L; Constant 0L|], []]
 
-let aluDecompBits = ["inp w"; "add z w"; "mod z 2"; "div w 2"; "add y w"; "mod y 2"; "div w 2"; "add x w"; "mod x 2"; "div w 2"; "mod w 2"] |> mapAluInstructions
-expand 1 aluDecompBits (initialState())
-
-let day24Input = getInputPath "Day24.txt" |> File.ReadAllLines |> mapAluInstructions //|> List.take 75
+let day24Input = getInputPath "Day24.txt" |> File.ReadAllLines |> mapAluInstructions  //|> List.take 200
 let expanded = expand 1 day24Input (initialState())
-expanded |> Seq.iter (fun (eq, cond) -> 
+
+let filterZeroExpansions exp =
+    exp |> Seq.filter (fun (eqs:Equation[], _) -> 
+        if eqs.[0] = Constant 0 || eqs.[1] = Constant 0 || eqs.[2] = Constant 0 || eqs.[3] = Constant 0 then
+            false
+        else 
+            true)
+
+expanded |> filterZeroExpansions |> Seq.iter (fun (eq, cond) -> 
     printf "w=%s; " (printEquation eq.[0])
     printf "x=%s; " (printEquation eq.[1])
     printf "y=%s; " (printEquation eq.[2])
@@ -240,6 +245,11 @@ expanded |> Seq.iter (fun (eq, cond) ->
         tail |> Seq.iter (fun c -> printf " && %s" (printCondition c))
     printfn ""
     )
+
+//let aluDecompBits = ["inp w"; "add z w"; "mod z 2"; "div w 2"; "add y w"; "mod y 2"; "div w 2"; "add x w"; "mod x 2"; "div w 2"; "mod w 2"] |> mapAluInstructions
+//expand 1 aluDecompBits (initialState())
+
+
 //printEquation 
 
 //module AluInterpreter =
