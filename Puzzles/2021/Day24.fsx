@@ -1,40 +1,41 @@
-﻿#load "../../Tools.fsx"
+﻿#r "nuget: FSharp.Quotations.Evaluator"
+
+open FSharp.Quotations.Evaluator
+open FSharp.Quotations
+
+#load "../../Tools.fsx"
 #time "on"
 
 open System
-open System.Diagnostics
-open System.Collections.Generic
 open System.IO
 open Tools
 
-type Var = | W = 0 | X = 1 | Y = 2 | Z = 3
+type Vars = | W = 0 | X = 1 | Y = 2 | Z = 3
 
-type Operand = 
-    | Variable of Var
-    | Const of int
+type Operand = | Variable of Vars | Const of int
 
 type Inst =
-    | Inp of Var
-    | Add of Var * Operand
-    | Mul of Var * Operand
-    | Div of Var * Operand
-    | Mod of Var * Operand
-    | Eql of Var * Operand
+    | Inp of Vars
+    | Add of Vars * Operand
+    | Mul of Vars * Operand
+    | Div of Vars * Operand
+    | Mod of Vars * Operand
+    | Eql of Vars * Operand
 
 let mapLine (l:string) = 
     let mapVar = 
         function 
-        | "w" -> Var.W 
-        | "x" -> Var.X 
-        | "y" -> Var.Y 
-        | "z" -> Var.Z 
+        | "w" -> Vars.W 
+        | "x" -> Vars.X 
+        | "y" -> Vars.Y 
+        | "z" -> Vars.Z 
         | c -> failwithf "Invalid variable %s" c
     let mapOperand = 
         function 
-        | "w" -> Variable Var.W 
-        | "x" -> Variable Var.X 
-        | "y" -> Variable Var.Y 
-        | "z" -> Variable Var.Z 
+        | "w" -> Variable Vars.W 
+        | "x" -> Variable Vars.X 
+        | "y" -> Variable Vars.Y 
+        | "z" -> Variable Vars.Z 
         | c -> Const (Int32.Parse(c))
     let inline getArguments (parts:string[]) = parts.[1] |> mapVar, parts.[2] |> mapOperand
     let split = l.Split(' ')
@@ -49,17 +50,11 @@ let mapLine (l:string) =
     
 let mapAluInstructions input = input |> Seq.map mapLine |> Seq.toList
 
-// type ALU = int64 -> Inst list -> int[]
-
-type Operator = 
-    | Plus
-    | Multiply
-    | Divide
-    | Modulo
+type Operator = | Plus | Multiply | Divide | Modulo
     
 type Equation = 
     | Constant of int
-    | Input of string
+    | Input of int
     | Operation of Equation * Operator * Equation
 
 let opStr = function | Plus -> "+" | Multiply -> "*" | Divide -> "/" | Modulo -> "%"
@@ -67,19 +62,93 @@ let opStr = function | Plus -> "+" | Multiply -> "*" | Divide -> "/" | Modulo ->
 let rec printEquation eq =
     match eq with
     | Constant x -> sprintf "%i" x
-    | Input i -> sprintf "%s" i
+    | Input i -> sprintf "i%i" i
     | Operation (eq1, op, eq2) ->
         sprintf "(%s %s %s)" (printEquation eq1) (opStr op) (printEquation eq2)
 
-type Condition = 
-    | AreEqual of Equation * Equation
-    | AreDifferent of Equation * Equation
+type Condition = | AreEqual of Equation * Equation | AreDifferent of Equation * Equation
 
 let printCondition = 
     function
     | AreEqual (e1,e2) -> sprintf "(%s = %s)" (printEquation e1) (printEquation e2)
     | AreDifferent (e1,e2) -> sprintf "(%s <> %s)" (printEquation e1) (printEquation e2)
     
+type ConditionSolution =
+    | AlwaysEqual
+    | AlwaysDifferent
+    | EqualIf of (Condition * int list) * (Condition * int list)
+
+let rec getInputUsed eq used =
+    match eq with
+    | Input i -> used |> Set.add i
+    | Constant _ -> used
+    | Operation (eq1, _, eq2) ->
+        Set.union (getInputUsed eq1 used) (getInputUsed eq2 used)
+
+let rec evaluate eq (vars:int[]) =
+    match eq with
+    | Input i -> vars.[i]
+    | Constant c -> c
+    | Operation (eq1, Plus, eq2) ->
+        (evaluate eq1 vars) + (evaluate eq2 vars)
+    | Operation (eq1, Divide, eq2) ->
+        (evaluate eq1 vars) / (evaluate eq2 vars)
+    | Operation (eq1, Multiply, eq2) ->
+        (evaluate eq1 vars) * (evaluate eq2 vars)
+    | Operation (eq1, Modulo, eq2) ->
+        (evaluate eq1 vars) % (evaluate eq2 vars)
+
+let isPossibleDigit1 eq (index:int) =
+    [0..9] |> Seq.exists (fun i ->
+        let vars = [|0;0;0;0;0;0;0;0;0;0;0;0;0;0|] 
+        Array.set vars index i
+        let evaluation = evaluate eq vars
+        evaluation >= 0 && evaluation <= 9
+    )
+
+let isPossibleDigit2 eq (index1:int) (index2:int) =
+    Seq.allPairs [0..9] [0..9]
+    |> Seq.exists (fun (i1,i2) ->
+        let vars = [|0;0;0;0;0;0;0;0;0;0;0;0;0;0|] 
+        Array.set vars index1 i1
+        Array.set vars index2 i2
+        let evaluation = evaluate eq vars
+        evaluation >= 0 && evaluation <= 9
+    )
+
+//let isPossibleDigit3 eq (index1:int) (index2:int) (index3:int)=
+//    Seq.allPairs [0..9] [0..9] 
+//    |> Seq.exists (fun (i1,i2) ->
+//        let vars = [|0;0;0;0;0;0;0;0;0;0;0;0;0;0|] 
+//        Array.set vars index1 i1
+//        Array.set vars index2 i2
+//        let evaluation = evaluate eq vars
+//        evaluation >= 0 && evaluation <= 9
+//    )
+
+let checkEqualityCandidates (left:Equation) (right:Equation) =
+    match left, right with
+    | eq1, eq2 when eq1 = eq2 -> 
+        ConditionSolution.AlwaysEqual
+    | Constant a, Constant b when a = b ->
+        ConditionSolution.AlwaysEqual
+    | Constant a, Constant b when a <> b ->
+        ConditionSolution.AlwaysDifferent
+    | Constant a, Input _ when a >= 10 || a < 0 ->
+        ConditionSolution.AlwaysDifferent
+    | eq1, Input _ ->
+        let inputs = getInputUsed eq1 Set.empty |> Seq.toList
+
+        if inputs.Length = 1 && ((isPossibleDigit1 eq1 inputs.[0]) |> not) then
+            ConditionSolution.AlwaysDifferent
+        else if inputs.Length = 2 && ((isPossibleDigit2 eq1 inputs.[0] inputs.[1]) |> not) then
+            ConditionSolution.AlwaysDifferent
+        else    
+            ((AreEqual(left, right), []), (AreDifferent(left, right), [])) |> EqualIf 
+    | eq1, Constant _ ->
+        ((AreEqual(left, right), []), (AreDifferent(left, right), [])) |> EqualIf 
+
+
 let apply index instr ((expansion, condition):Equation[] * Condition list) =
     let getOperandValue =
         function
@@ -89,20 +158,16 @@ let apply index instr ((expansion, condition):Equation[] * Condition list) =
     match instr with
     | Inp v ->
         let vInt = v |> int
-        expansion.[vInt] <- sprintf "i%i" index |> Input
+        expansion.[vInt] <- index |> Input
         [expansion, condition]
     | Add (v,a) ->
         let vInt = v |> int
         let aVal = getOperandValue a
         match expansion.[vInt], aVal with
-        | Constant 0, _ -> // 0 + b = b
-            expansion.[vInt] <- aVal
-        | _, Constant 0 -> // a + 0 = a
-            ()
-        | Constant a, Constant b ->
-            expansion.[vInt] <- Constant (a + b)
-        | _ -> 
-            expansion.[vInt] <- Operation (expansion.[vInt], Plus, aVal)
+        | Constant 0, _             -> expansion.[vInt] <- aVal
+        | _, Constant 0             -> ()
+        | Constant a, Constant b    -> expansion.[vInt] <- Constant (a + b)
+        | _                         -> expansion.[vInt] <- Operation (expansion.[vInt], Plus, aVal)
         [expansion, condition]
     | Mul (v,a) ->
         let vInt = v |> int
@@ -132,28 +197,19 @@ let apply index instr ((expansion, condition):Equation[] * Condition list) =
     | Eql (v,a) ->
         let vInt = v |> int
         let aVal = getOperandValue a
-        // TODO: Expand the conditions by implementing a isSatisfiable cond function
-        match expansion.[vInt], aVal with
-        | eq1, eq2 when eq1 = eq2 -> 
+        match checkEqualityCandidates expansion.[vInt] aVal with
+        | AlwaysEqual ->
             expansion.[vInt] <- Constant 1
             [expansion, condition]
-        | Constant a, Constant b when a = b ->
-            expansion.[vInt] <- Constant 1
-            [expansion, condition]
-        | Constant a, Constant b when a <> b ->
+        | AlwaysDifferent -> 
             expansion.[vInt] <- Constant 0
             [expansion, condition]
-        | Constant a, Input _ when a >= 10 || a < 0 ->
-            expansion.[vInt] <- Constant 0
-            [expansion, condition]
-        | _ ->
+        | EqualIf ((condEqual, valuesEqual), (condDiff, valuesDiff)) ->
             let e1 = expansion |> Array.copy
             let e2 = expansion |> Array.copy
             e1.[vInt] <- Constant 1
             e1.[vInt] <- Constant 0
-            [
-                (e1, (AreEqual(expansion.[vInt], aVal)) :: condition); 
-                (e2, (AreDifferent(expansion.[vInt], aVal)) :: condition)]
+            [(e1, condEqual :: condition); (e2, condDiff :: condition)]
 
 let rec expand index instructions expansions =
     match instructions with
@@ -169,7 +225,7 @@ let initialState () = [[|Constant 0; Constant 0; Constant 0; Constant 0|], []]
 let aluDecompBits = ["inp w"; "add z w"; "mod z 2"; "div w 2"; "add y w"; "mod y 2"; "div w 2"; "add x w"; "mod x 2"; "div w 2"; "mod w 2"] |> mapAluInstructions
 expand 1 aluDecompBits (initialState())
 
-let day24Input = getInputPath "Day24.txt" |> File.ReadAllLines |> mapAluInstructions |> List.take 50
+let day24Input = getInputPath "Day24.txt" |> File.ReadAllLines |> mapAluInstructions //|> List.take 75
 let expanded = expand 1 day24Input (initialState())
 expanded |> Seq.iter (fun (eq, cond) -> 
     printf "w=%s; " (printEquation eq.[0])
