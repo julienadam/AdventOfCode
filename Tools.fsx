@@ -3,10 +3,15 @@ open System.IO
 open System.Text.RegularExpressions
 
 let getInputPath file = Path.Combine(__SOURCE_DIRECTORY__, "Input", "2021", file)
+let getInputPath2022 file = Path.Combine(__SOURCE_DIRECTORY__, "Input", "2022", file)
 
 let Dump obj =
     printfn "%A" obj
     obj
+
+let split2 (sep : char) (s : string) = 
+    let split = s.Split(sep)
+    split.[0], split.[1]
 
 module SeqEx =
     let read n s =
@@ -70,3 +75,8 @@ module Array2DTools =
             if i % 10 = 9 then
                 printfn ""
         
+type Compass =
+| Up
+| Down
+| Left
+| Right
