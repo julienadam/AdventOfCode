@@ -11,74 +11,72 @@ let mapLine (dir : string, len) =
 
 let getInput p = File.ReadAllLines(getInputPath2022 p) |> Seq.map (split2 ' ') |> Seq.map mapLine
 
-type HeadPosition =
-| Cover
-| Right
-| Left
-| Up
-| UpLeft
-| UpRight
-| Down
-| DownLeft
-| DownRight
-
+type HeadPosition = Compass option
 type coords = int * int
 
-let makeMove (headDir:Compass) (headPos, (tailX,tailY)) (placesVisited:HashSet<coords>) =
-    let unchanged = tailX, tailY
-    let newHeadPos, newTailCoords =
-        match headPos, headDir with 
-        | Cover,    Compass.Right   -> Right,       unchanged
-        | Cover,    Compass.Left    -> Left,        unchanged
-        | Cover,    Compass.Up      -> Up,          unchanged
-        | Cover,    Compass.Down    -> Down,        unchanged
-        | Right,    Compass.Right   -> Right,       (tailX+1, tailY)
-        | Right,    Compass.Left    -> Cover,       unchanged
-        | Right,    Compass.Down    -> DownRight,   unchanged
-        | Right,    Compass.Up      -> UpRight,     unchanged
-        | Left,     Compass.Left    -> Left,        (tailX-1, tailY)
-        | Left,     Compass.Right   -> Cover,       unchanged
-        | Left,     Compass.Down    -> DownLeft,    unchanged
-        | Left,     Compass.Up      -> UpLeft,      (tailX, tailY)
-        | Up,       Compass.Up      -> Up,          (tailX, tailY-1)
-        | Up,       Compass.Down    -> Cover,       unchanged
-        | Up,       Compass.Right   -> UpRight,     unchanged
-        | Up,       Compass.Left    -> UpLeft,      unchanged
-        | Down,     Compass.Down    -> Down,        (tailX, tailY+1)
-        | Down,     Compass.Up      -> Cover,       unchanged
-        | Down,     Compass.Right   -> DownRight,   unchanged
-        | Down,     Compass.Left    -> DownLeft,    unchanged
-        | UpRight,  Compass.Down    -> Right,       unchanged
-        | UpRight,  Compass.Up      -> Up,          (tailX + 1, tailY - 1)
-        | UpRight,  Compass.Right   -> Right,       (tailX + 1, tailY - 1)
-        | UpRight,  Compass.Left    -> Up,          unchanged
-        | UpLeft,   Compass.Down    -> Left,        unchanged
-        | UpLeft,   Compass.Up      -> Up,          (tailX - 1, tailY - 1)
-        | UpLeft,   Compass.Right   -> Up,          unchanged
-        | UpLeft,   Compass.Left    -> Left,        (tailX - 1, tailY - 1)
-        | DownRight,Compass.Down    -> Down,        (tailX + 1, tailY + 1)
-        | DownRight,Compass.Up      -> Right,       unchanged
-        | DownRight,Compass.Left    -> Down,        unchanged
-        | DownRight,Compass.Right   -> Right,       (tailX + 1, tailY + 1)
-        | DownLeft, Compass.Down    -> Down,        (tailX - 1, tailY + 1)
-        | DownLeft, Compass.Up      -> Left,        unchanged
-        | DownLeft, Compass.Left    -> Left,        (tailX - 1, tailY + 1)
-        | DownLeft, Compass.Right   -> Down,        unchanged
+let makeMove headDir (headPos, move) =
+    match headPos, headDir with 
+    | None,             Right   -> Some Right,       None
+    | None,             Left    -> Some Left,        None              
+    | None,             Up      -> Some Up,          None
+    | None,             Down    -> Some Down,        None
+    | Some Right,       Right   -> Some Right,       Right |> Some
+    | Some Right,       Left    -> None,             None
+    | Some Right,       Down    -> Some DownRight,   None
+    | Some Right,       Up      -> Some UpRight,     None
+    | Some Left,        Left    -> Some Left,        Left |> Some
+    | Some Left,        Right   -> None,             None
+    | Some Left,        Down    -> Some DownLeft,    None
+    | Some Left,        Up      -> Some UpLeft,      None
+    | Some Up,          Up      -> Some Up,          Up |> Some
+    | Some Up,          Down    -> None,             None
+    | Some Up,          Right   -> Some UpRight,     None
+    | Some Up,          Left    -> Some UpLeft,      None
+    | Some Down,        Down    -> Some Down,        Down |> Some
+    | Some Down,        Up      -> None,             None
+    | Some Down,        Right   -> Some DownRight,   None
+    | Some Down,        Left    -> Some DownLeft,    None
+    | Some UpRight,     Down    -> Some Right,       None
+    | Some UpRight,     Up      -> Some Up,          UpRight |> Some
+    | Some UpRight,     Right   -> Some Right,       UpRight |> Some
+    | Some UpRight,     Left    -> Some Up,          None
+    | Some UpLeft,      Down    -> Some Left,        None
+    | Some UpLeft,      Up      -> Some Up,          UpLeft |> Some
+    | Some UpLeft,      Right   -> Some Up,          None
+    | Some UpLeft,      Left    -> Some Left,        UpLeft |> Some
+    | Some DownRight,   Down    -> Some Down,        DownRight |> Some
+    | Some DownRight,   Up      -> Some Right,       None
+    | Some DownRight,   Left    -> Some Down,        None
+    | Some DownRight,   Right   -> Some Right,       DownRight |> Some
+    | Some DownLeft,    Down    -> Some Down,        DownLeft |> Some
+    | Some DownLeft,    Up      -> Some Left,        None
+    | Some DownLeft,    Left    -> Some Left,        DownLeft |> Some
+    | Some DownLeft,    Right   -> Some Down,        None
     
-    if not (newTailCoords = unchanged) then
-        placesVisited.Add(newTailCoords) |> ignore
-    
-    newHeadPos, newTailCoords
+let applyMove (x,y) (move: Compass option) =
+    match move with
+    | None -> (x,y)
+    | Some Compass.Up -> (x, y-1)
+    | Some Compass.Down -> (x, y+1)
+    | Some Compass.Left -> (x-1, y)
+    | Some Compass.Right -> (x+1, y)
+    | Some Compass.UpRight -> (x+1, y-1)
+    | Some Compass.UpLeft -> (x-1, y-1)
+    | Some Compass.DownRight -> (x+1, y+1)
+    | Some Compass.DownLeft -> (x-1, y+1)
 
 let solve1 input =
     let instructions = getInput input |> Seq.toList
     let visited = new HashSet<coords>([(0,0)])
-    let initialState = Cover, (0, 0)
+    let initialState = None, (0, 0)
 
     let finalState = 
         instructions |> Seq.fold (fun state (dir, len) ->
-            [1..len] |> Seq.fold (fun s _ -> 
-                makeMove dir s visited
+            [1..len] |> Seq.fold (fun (hp,coords) _ -> 
+                let newHeadPos, move = makeMove dir (hp,coords)
+                let newCoords = applyMove coords move
+                visited.Add(newCoords) |> ignore
+                newHeadPos, newCoords
             ) state
         ) initialState
 
@@ -89,3 +87,12 @@ let solve1 input =
     
 solve1 "Day09.txt" |> Dump
 
+//let solve2 input = 
+//    let instructions = getInput input |> Seq.toList
+//    let part2State = [1..10] |> List.map (fun i -> Cover, (0, 0))
+//    let visited = new HashSet<coords>([(0,0)])
+    
+//    instructions |> Seq.fold (fun state (dir, len) ->
+//        let node1' = makeMove dir state.[0]
+//        // let node2' = makeMove dir node1'
+//    ) part2State

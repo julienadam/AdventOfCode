@@ -80,3 +80,7 @@ type Compass =
 | Down
 | Left
 | Right
+| UpRight
+| UpLeft
+| DownRight
+| DownLeft
