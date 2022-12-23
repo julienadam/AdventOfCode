@@ -7,7 +7,6 @@
 
   <ItemGroup>
     <None Include=".gitignore" />
-    <None Include="Puzzles\2022\Day09v2.fsx" />
     <None Include="Puzzles\2022\Day09.fsx" />
     <None Include="Tools.fsx" />
     <Content Include="Input\2021\day01.txt" />

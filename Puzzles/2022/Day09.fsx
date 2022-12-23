@@ -14,227 +14,135 @@ let getInput p = File.ReadAllLines(getInputPath2022 p) |> Seq.map (split2 ' ') |
 
 type coords = int * int
 
-let makeMove (headDir: Compass option) headPos =
-    if headDir.IsNone then
-        None, None
-    else
-        match headPos, headDir.Value with 
-        | None,             dir       -> Some dir,       None
-        | Some p, d when d = p        -> Some p,         p |> Some
-        | Some Right,       Left      -> None,           None
-        | Some Right,       Down      -> Some DownRight, None
-        | Some Right,       Up        -> Some UpRight,   None
-        | Some Right,       UpRight   -> Some Right,     UpRight |> Some
-        | Some Right,       UpLeft    -> Some Up,        None
-        | Some Right,       DownRight -> Some Right,     DownRight |> Some
-        | Some Right,       DownLeft  -> Some Down,      None
-        | Some Left,        Right     -> None,           None
-        | Some Left,        Down      -> Some DownLeft,  None
-        | Some Left,        Up        -> Some UpLeft,    None
-        | Some Left,        UpRight   -> Some Up,        None
-        | Some Left,        UpLeft    -> Some Left,      UpLeft |> Some
-        | Some Left,        DownRight -> Some Down,      None
-        | Some Left,        DownLeft  -> Some Left,      DownLeft |> Some
-        | Some Up,          Down      -> None,           None
-        | Some Up,          Right     -> Some UpRight,   None
-        | Some Up,          Left      -> Some UpLeft,    None
-        | Some Up,          UpRight   -> Some Up,        Some UpRight
-        | Some Up,          UpLeft    -> Some Up,        Some UpLeft
-        | Some Up,          DownRight -> Some Right,     None
-        | Some Up,          DownLeft  -> Some Left,      None
-        | Some Down,        Up        -> None,           None
-        | Some Down,        Right     -> Some DownRight, None
-        | Some Down,        Left      -> Some DownLeft,  None
-        | Some Down,        UpRight   -> Some Right,     None
-        | Some Down,        UpLeft    -> Some Left,      None
-        | Some Down,        DownRight -> Some Down,      Some DownRight
-        | Some Down,        DownLeft  -> Some Down,      Some DownLeft
-        | Some UpRight,     Down      -> Some Right,     None
-        | Some UpRight,     Up        -> Some Up,        UpRight |> Some
-        | Some UpRight,     Right     -> Some Right,     UpRight |> Some
-        | Some UpRight,     Left      -> Some Up,        None
-        //| Some UpRight,     UpRight   -> Some UpRight,   Some UpRight
-        | Some UpRight,     UpLeft    -> Some Up,        Some Up
-        | Some UpRight,     DownRight -> Some Right,     Some Right
-        | Some UpRight,     DownLeft  -> None,           None
-        | Some UpLeft,      Down      -> Some Left,      None
-        | Some UpLeft,      Up        -> Some Up,        UpLeft |> Some
-        | Some UpLeft,      Right     -> Some Up,        None
-        | Some UpLeft,      Left      -> Some Left,      UpLeft |> Some
-        | Some UpLeft,      UpRight   -> Some Up,        Some Up
-        //| Some UpLeft,      UpLeft    -> Some UpLeft,    Some UpLeft
-        | Some UpLeft,      DownRight -> None,           None
-        | Some UpLeft,      DownLeft  -> Some Left,      Some Left
-        | Some DownRight,   Down      -> Some Down,      DownRight |> Some
-        | Some DownRight,   Up        -> Some Right,     None
-        | Some DownRight,   Left      -> Some Down,      None
-        | Some DownRight,   Right     -> Some Right,     DownRight |> Some
-        | Some DownRight,   UpRight     -> Some Right,   Right |> Some
-        | Some DownRight,   UpLeft     -> None,   None
-        //| Some DownRight,   DownRight     -> Some DownRight,   Some DownRight
-        | Some DownRight,   DownLeft     -> Some Down,   Down |> Some
-        | Some DownLeft,    Down      -> Some Down,      DownLeft |> Some
-        | Some DownLeft,    Up        -> Some Left,      None
-        | Some DownLeft,    Left      -> Some Left,      DownLeft |> Some
-        | Some DownLeft,    Right     -> Some Down,      None
-        | Some DownLeft,    UpRight     -> None, None
-        | Some DownLeft,    UpLeft     -> Some Left, Some Left
-        //| Some DownLeft,    DownLeft     -> Some DownLeft, Some DownLeft
-        | Some DownLeft,    DownRight     -> Some Down, Some Down
-        | p, d -> failwithf "Pos %A and dir %A is not handled" p d
 
-let applyMove (x,y) (move: Compass option) =
-    match move with
-    | None -> (x,y)
-    | Some Compass.Up -> (x, y-1)
-    | Some Compass.Down -> (x, y+1)
-    | Some Compass.Left -> (x-1, y)
-    | Some Compass.Right -> (x+1, y)
-    | Some Compass.UpRight -> (x+1, y-1)
-    | Some Compass.UpLeft -> (x-1, y-1)
-    | Some Compass.DownRight -> (x+1, y+1)
-    | Some Compass.DownLeft -> (x-1, y+1)
+let move (x,y) (px,py) =
+    let xMoves = (px > x + 1 || px < x - 1)
+    let yMoves = (py > y + 1 || py < y - 1)
+    
+    let nx = 
+        if px > x + 1 || ((px = x + 1) && yMoves) then
+            x + 1
+        else if px < x - 1 || ((px = x - 1) && yMoves) then
+            x - 1
+        else 
+            x
+
+    let ny = 
+        if (py > y + 1) || ((py = y + 1) && xMoves) then
+            y + 1
+        else if py < y - 1 || ((py = y - 1) && xMoves) then
+            y - 1
+        else 
+            y
+
+    nx, ny
+
+
+// Tests
+//move (0,0) (1,0)
+//move (0,0) (1,1)
+//move (0,0) (0,2)
+//move (0,0) (2,0)
+//move (0,0) (2,2)
+//move (0,0) (0,-2)
+//move (0,0) (-2,0)
+//move (0,0) (-2,-2)
+//move (0,0) (-2,2)
+//move (0,0) (2,-2)
+//move (0,0) (2,1)
+//move (0,0) (1,2)
+//move (0,0) (1,-2)
+//move (0,0) (-2, 1)
+//move (0,0) (-2, -1)
+//move (0,0) (-1, 2)
+//move (0,0) (-1, -2)
+
+type Knot = 
+    {
+        Name : string
+        mutable Coords : coords
+        mutable Previous: Knot option
+        mutable Next: Knot option
+        visitor: (coords -> unit) option
+    } 
+    member this.Move(dir: Compass) = 
+        let x, y = this.Coords
+        let nx, ny = 
+            match dir with
+            | Compass.Up -> (x, y-1)
+            | Compass.Down -> (x, y+1)
+            | Compass.Left -> (x-1, y)
+            | Compass.Right -> (x+1, y)
+            | _ -> failwithf "Not a valid direction"
+        this.Coords <- nx, ny
+        if this.Next.IsSome then
+            this.Next.Value.Update()
+    member this.Update() =
+        let x, y = this.Coords
+        let px, py = this.Previous.Value.Coords
+        let nx, ny = move (x,y) (px,py)
+
+        if not (this.Coords = (nx, ny)) then
+            if this.visitor.IsSome then
+                this.visitor.Value(nx, ny)
+            this.Coords <- nx, ny
+            if this.Next.IsSome then
+                this.Next.Value.Update()
 
 let solve1 input =
     let instructions = getInput input |> Seq.toList
     let visited = new HashSet<coords>([(0,0)])
-    let initialState = None, (0, 0)
+    let visitor c = visited.Add(c) |> ignore
 
-    let finalState = 
-        instructions |> Seq.fold (fun state (dir, len) ->
-            [1..len] |> Seq.fold (fun (hp,coords) _ -> 
-                let newHeadPos, move = makeMove (Some dir) hp
-                let newCoords = applyMove coords move
-                visited.Add(newCoords) |> ignore
-                newHeadPos, newCoords
-            ) state
-        ) initialState
+    let head = { Name = "Head"; Coords = (0,0); Previous = None; Next = None; visitor = None }
+    let tail = { Name = "Tail"; Coords = (0,0); Previous = Some head; Next = None; visitor = Some visitor }
+    head.Next <- Some tail
 
-    // finalState |> Dump
+    instructions |> Seq.iter(fun (dir, len) -> 
+        [1..len] |> Seq.iter(
+            fun _ -> 
+                head.Move dir
+        )
+    )
 
     visited.Count
 
-    
-solve1 "Day09.txt" |> Dump
 
-let getKnotPositions (positions: Compass option list) (tailX, tailY) = seq {
-    yield (tailX, tailY), "H"
-    let mutable currentX, currentY = tailX, tailY
-    let mutable index = 0
-    for p in positions |> List.rev do
-        let c = sprintf "%c" ((char) ((int) '9' - index))
-        let newX, newY = 
-            match p with
-            | None -> (currentX, currentY)
-            | Some Up -> (currentX, currentY - 1)
-            | Some Down -> (currentX, currentY + 1)
-            | Some Left -> (currentX - 1, currentY)
-            | Some Right -> (currentX + 1, currentY)
-            | Some UpRight -> (currentX + 1, currentY - 1)
-            | Some UpLeft -> (currentX - 1, currentY - 1)
-            | Some DownRight -> (currentX + 1, currentY + 1)
-            | Some DownLeft -> (currentX - 1, currentY + 1)
-        index <- index + 1
-        currentX <- newX
-        currentY <- newY
-        yield (newX, newY), c
-}
-
-open XPlot.Plotly
-
-let display (positions: Compass option list) (tailX, tailY) =
-
-    let knotPos = (getKnotPositions positions  (tailX, tailY)) |> Seq.toArray
-
-    let xs = knotPos |> Array.map fst |> Array.map fst
-    let ys = knotPos |> Array.map fst |> Array.map snd
-    let labels = knotPos |> Array.map snd
-
-    printfn "%A" xs
-    printfn "%A" ys
-    printfn "%A" labels
-
-    let trace1 =
-        Scatter(
-            x = xs,
-            y = ys,
-            text = labels
-        )
-
-    let styledLayout =
-        Layout(
-            xaxis =
-                Xaxis(
-                    ticklen = 1
-                ),
-            yaxis =
-                Yaxis(
-                    ticklen = 1
-                )
-        )
-    
-
-    [trace1]
-    |> Chart.Plot
-    |> Chart.WithLayout styledLayout
-    |> Chart.WithWidth 700
-    |> Chart.WithHeight 500
-    |> Chart.Show
+solve1 "Day09.txt"
 
 
-let solve2 input = 
+let solve2 input =
     let instructions = getInput input |> Seq.toList
-    let part2State : Compass option list * (int * int) = [1..10] |> List.map (fun _ -> None), (0,0)
-    
     let visited = new HashSet<coords>([(0,0)])
-    
-    let finalState = 
-        instructions |> Seq.fold (fun (headPositions : Compass option list, tailCoords) (dir, len) ->
-            let mutable positions, coords = headPositions, tailCoords
-            for i = 0 to len - 1 do
-                let hp1 = positions.[0]
-                let hp1', m1 = makeMove (Some dir) hp1
-        
-                let hp2 = positions.[1]
-                let hp2', m2 = makeMove m1 hp2
-        
-                let hp3 = positions.[2]
-                let hp3', m3 = makeMove m2 hp3
-        
-                let hp4 = positions.[3]
-                let hp4', m4 = makeMove m3 hp4
-        
-                let hp5 = positions.[4]
-                let hp5', m5 = makeMove m4 hp5
-        
-                let hp6 = positions.[5]
-                let hp6', m6 = makeMove m5 hp6
-        
-                let hp7 = positions.[6]
-                let hp7', m7 = makeMove m6 hp7
-        
-                let hp8 = positions.[7]
-                let hp8', m8 = makeMove m7 hp8
-        
-                let hp9 = positions.[8]
-                let hp9', m9 = makeMove m8 hp9
-        
-                let hp10 = positions.[9]
-                let hp10', m10 = makeMove m9 hp10
-        
-                let newTailCoords = applyMove tailCoords m10
-                visited.Add(newTailCoords) |> ignore
+    let visitor c = visited.Add(c) |> ignore
 
-                positions <- [hp1'; hp2'; hp3'; hp4';hp5';hp6';hp7';hp8';hp9';hp10';]
-                coords <- newTailCoords
-            
-            display positions coords
-            positions, coords
-        
-        ) part2State
+    let head = { Name = "Head"; Coords = (0,0); Previous = None; Next = None; visitor = None }
+    let k1 = { Name = "1"; Coords = (0,0); Previous = Some head; Next = None; visitor = None }
+    let k2 = { Name = "2"; Coords = (0,0); Previous = Some k1; Next = None; visitor = None }
+    let k3 = { Name = "3"; Coords = (0,0); Previous = Some k2; Next = None; visitor = None }
+    let k4 = { Name = "4"; Coords = (0,0); Previous = Some k3; Next = None; visitor = None }
+    let k5 = { Name = "5"; Coords = (0,0); Previous = Some k4; Next = None; visitor = None }
+    let k6 = { Name = "6"; Coords = (0,0); Previous = Some k5; Next = None; visitor = None }
+    let k7 = { Name = "7"; Coords = (0,0); Previous = Some k6; Next = None; visitor = None }
+    let k8 = { Name = "8"; Coords = (0,0); Previous = Some k7; Next = None; visitor = None }
+    let tail = { Name = "Tail"; Coords = (0,0); Previous = Some k8; Next = None; visitor = Some visitor }
+    head.Next <- Some k1
+    k1.Next <- Some k2
+    k2.Next <- Some k3
+    k3.Next <- Some k4
+    k4.Next <- Some k5
+    k5.Next <- Some k6
+    k6.Next <- Some k7
+    k7.Next <- Some k8
+    k8.Next <- Some tail
+    
+    instructions |> Seq.iter(fun (dir, len) -> 
+        [1..len] |> Seq.iter(
+            fun _ -> 
+                head.Move dir
+        )
+    )
 
     visited.Count
 
-
-solve2 "Day09_sample2.txt" |> Dump
-
+solve2 "Day09.txt"
