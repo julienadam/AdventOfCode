@@ -110,21 +110,23 @@ let solve1 input =
 
 solve1 "Day09.txt"
 
-
 let solve2 input =
+    let mkKnot name prev = 
+        { Name = name; Coords = (0,0); Previous = Some prev; Next = None; visitor = None }
+    
     let instructions = getInput input |> Seq.toList
     let visited = new HashSet<coords>([(0,0)])
     let visitor c = visited.Add(c) |> ignore
 
     let head = { Name = "Head"; Coords = (0,0); Previous = None; Next = None; visitor = None }
-    let k1 = { Name = "1"; Coords = (0,0); Previous = Some head; Next = None; visitor = None }
-    let k2 = { Name = "2"; Coords = (0,0); Previous = Some k1; Next = None; visitor = None }
-    let k3 = { Name = "3"; Coords = (0,0); Previous = Some k2; Next = None; visitor = None }
-    let k4 = { Name = "4"; Coords = (0,0); Previous = Some k3; Next = None; visitor = None }
-    let k5 = { Name = "5"; Coords = (0,0); Previous = Some k4; Next = None; visitor = None }
-    let k6 = { Name = "6"; Coords = (0,0); Previous = Some k5; Next = None; visitor = None }
-    let k7 = { Name = "7"; Coords = (0,0); Previous = Some k6; Next = None; visitor = None }
-    let k8 = { Name = "8"; Coords = (0,0); Previous = Some k7; Next = None; visitor = None }
+    let k1 = mkKnot "1" head
+    let k2 = mkKnot "2" k1
+    let k3 = mkKnot "3" k2
+    let k4 = mkKnot "4" k3
+    let k5 = mkKnot "5" k4
+    let k6 = mkKnot "6" k5
+    let k7 = mkKnot "7" k6
+    let k8 = mkKnot "8" k7
     let tail = { Name = "Tail"; Coords = (0,0); Previous = Some k8; Next = None; visitor = Some visitor }
     head.Next <- Some k1
     k1.Next <- Some k2
