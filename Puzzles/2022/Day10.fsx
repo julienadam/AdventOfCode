@@ -15,8 +15,6 @@ let mapLine line =
 
 let getInput p = File.ReadAllLines(getInputPath2022 p) |> Seq.map mapLine
 
-// getInput "Day10_sample1.txt" |> Dump
-
 let execute (instructions: Instruction seq) = seq {
     let mutable cycle = 1
     let mutable x = 1
@@ -38,12 +36,33 @@ let solve1 (instructions: Instruction seq) =
     let cycles = 
         execute instructions 
         |> Seq.toArray
-        //|> Array.map (fun (c,x) -> 
-        //    printfn "%i\t%i" c x
-        //    c,x)
     
     [20; 60; 100; 140; 180; 220] |> Seq.map (fun i -> i * (cycles[i] |> snd)) |> Seq.sum
 
 getInput "Day10.txt"
 |> solve1
 |> Dump
+
+
+let solve2 (instructions: Instruction seq) =
+    let cycles = 
+        execute instructions 
+        |> Seq.toArray
+        |> Seq.skip 1
+
+    let crt : seq<char> = 
+        cycles |> Seq.map (fun (cycle, x) ->
+            let pos = (cycle - 2) % 40
+            if pos >= x - 1 && pos <= x + 1 then
+                '\u2588'
+            else
+                ' ')
+    crt 
+    |> Seq.chunkBySize(40)
+    |> Seq.iter (fun c ->
+        printfn "%s" (new String(c))
+    )
+
+
+getInput "Day10.txt"
+|> solve2
