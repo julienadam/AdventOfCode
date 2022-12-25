@@ -125,6 +125,7 @@ module FullAStar =
             match config.maxIterations with 
             | Some n when n = closedSet.Count -> None
             | _ ->
+                // TODO: optimize sort using a better data structure
                 match List.sortBy (fun n -> fScores.[n]) openSet with
                 | current::_ when current = goal -> Some <| reconstructPath cameFrom current 
                 | current::rest ->
