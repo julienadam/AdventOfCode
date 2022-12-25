@@ -57,9 +57,9 @@ let solve1 (grid : int[,], start, target) =
     | Some i -> Some ((i |> Seq.length) - 1)
     | _ -> None
 
-getInput "Day12.txt"
-|> solve1 
-|> Dump
+//getInput "Day12.txt"
+//|> solve1 
+//|> Dump
 
 let solve2 (grid : int[,], _, target: int*int) =
     let startingPoints =
@@ -72,5 +72,12 @@ let solve2 (grid : int[,], _, target: int*int) =
     |> Seq.choose (fun s -> solve1 (grid, s, target))
     |> Seq.min
 
+
+open System.Diagnostics
+let sw = Stopwatch.StartNew()
+
 getInput "Day12.txt"
 |> solve2
+|> Dump
+
+printfn "Solved in %A" sw.Elapsed

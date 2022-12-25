@@ -87,6 +87,8 @@ type Compass =
 
 module FullAStar = 
 
+    open System.Collections.Generic;
+
     type Config<'a> = 
         {
             /// <summary>
@@ -119,31 +121,43 @@ module FullAStar =
                 | Some next -> yield! reconstructPath cameFrom next
             }
 
-        let rec crawler closedSet (openSet, gScores, fScores, cameFrom) =
+        let rec crawler (closedSet:HashSet<'a>) (openSet, gScores : IDictionary<'a, float>, fScores : IDictionary<'a, float>, cameFrom) =
             match config.maxIterations with 
-            | Some n when n = Set.count closedSet -> None
+            | Some n when n = closedSet.Count -> None
             | _ ->
-                match List.sortBy (fun n -> Map.find n fScores) openSet with
+                match List.sortBy (fun n -> fScores.[n]) openSet with
                 | current::_ when current = goal -> Some <| reconstructPath cameFrom current 
                 | current::rest ->
-                    let gScore = Map.find current gScores
+                    let gScore = gScores.[current]
                     let next =
                         config.neighbours current 
-                        |> Seq.filter (fun n -> closedSet |> Set.contains n |> not)
-                        |> Seq.fold (fun (openSet, gScores, fScores, cameFrom) neighbour ->
+                        |> Seq.filter (fun n -> closedSet.Contains(n) |> not)
+                        |> Seq.fold (fun (openSet, gScores : IDictionary<'a, float>, fScores : IDictionary<'a, float>, cameFrom) neighbour ->
                             let tentativeGScore = gScore + config.gCost current neighbour
-                            if List.contains neighbour openSet && tentativeGScore >= Map.find neighbour gScores 
+                            if List.contains neighbour openSet && tentativeGScore >= gScores.[neighbour]
                             then (openSet, gScores, fScores, cameFrom)
                             else
                                 let newOpenSet = if List.contains neighbour openSet then openSet else neighbour::openSet
-                                let newGScores = Map.add neighbour tentativeGScore gScores
-                                let newFScores = Map.add neighbour (tentativeGScore + config.fCost neighbour goal) fScores
+                                if gScores.ContainsKey neighbour then
+                                    gScores.[neighbour] = tentativeGScore |> ignore
+                                else
+                                    gScores.Add(neighbour, tentativeGScore)
+
+                                let ns =(tentativeGScore + config.fCost neighbour goal)
+                                if fScores.ContainsKey neighbour then
+                                    fScores.[neighbour] = ns |> ignore
+                                else
+                                    fScores.Add(neighbour, ns)
+
                                 let newCameFrom = Map.add neighbour current cameFrom
-                                newOpenSet, newGScores, newFScores, newCameFrom
+                                newOpenSet, gScores, fScores, newCameFrom
                             ) (rest, gScores, fScores, cameFrom)
-                    crawler (Set.add current closedSet) next
+                    closedSet.Add(current) |> ignore
+                    crawler closedSet next
                 | _ -> None
 
-        let gScores = Map.ofList [start, 0.]
-        let fScores = Map.ofList [start, config.fCost start goal]
-        crawler Set.empty ([start], gScores, fScores, Map.empty)
+        let gScores = new Dictionary<'a, float>()
+        gScores.Add(start, 0.)
+        let fScores = new Dictionary<'a, float>()
+        fScores.Add(start, config.fCost start goal)
+        crawler (new HashSet<'a>()) ([start], gScores, fScores, Map.empty)
