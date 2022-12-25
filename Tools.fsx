@@ -9,6 +9,8 @@ let Dump obj =
     printfn "%A" obj
     obj
 
+let ssplit (sep:string) (str:string) = str.Split([|sep|], StringSplitOptions.None)
+
 let split2 (sep : char) (s : string) = 
     let split = s.Split(sep)
     split.[0], split.[1]
