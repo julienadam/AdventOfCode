@@ -81,9 +81,9 @@ let rec sandFall (r,c) (grid:Grid) =
                             grid.cells.Add((r,c),Sand) |> ignore
                             Some grid
 
+let origin = 0, 500
 
 let letItFlow grid = seq {
-    let origin = 0, 500
     let mutable counter = 0
     while true do
         let result = grid |> sandFall origin
@@ -99,6 +99,38 @@ let solve1 grid =
     letItFlow grid
     |> Seq.find (fun a -> a.IsNone)
 
-getInput "Day14.txt"
-|> solve1
+//getInput "Day14.txt"
+//|> solve1
 
+let rec fillWithSand (row,col) (grid:Grid) numGrains =
+    if row = grid.maxR + 1 then
+        // Hit the infinite bottom
+        grid.cells.Add((row,col),Sand) |> ignore
+        fillWithSand origin grid (numGrains + 1)
+    else
+        // testing down
+        match grid.cells.TryGetValue((row+1,col)) with
+        | false, _ -> fillWithSand (row+1, col) grid numGrains
+        | _ ->
+            // testing down left
+            match grid.cells.TryGetValue((row+1, col-1)) with
+            | false, _ -> fillWithSand (row+1, col-1) grid numGrains
+            | _ -> 
+                // testing down right
+                match grid.cells.TryGetValue((row+1, col+1)) with
+                | false, _ -> fillWithSand (row+1, col+1) grid numGrains
+                | _ -> 
+                    if (row,col) = origin then
+                        // grain just rested at origin, stop
+                        printGrid grid |> ignore
+                        numGrains + 1
+                    else
+                        // grain is at rest, next please!
+                        grid.cells.Add((row,col),Sand) |> ignore
+                        fillWithSand origin grid (numGrains + 1)
+
+
+let solve2 grid = fillWithSand origin grid 0
+
+getInput "Day14.txt"
+|> solve2
