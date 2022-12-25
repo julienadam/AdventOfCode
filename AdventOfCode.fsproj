@@ -7,6 +7,11 @@
 
   <ItemGroup>
     <None Include=".gitignore" />
+    <None Include="Puzzles\2022\Day14.fsx" />
+    <None Include="Puzzles\2022\Day13.fsx" />
+    <None Include="Puzzles\2022\Day12.fsx" />
+    <None Include="Puzzles\2022\Day11.fsx" />
+    <None Include="Puzzles\2022\Day10.fsx" />
     <None Include="Puzzles\2022\Day09.fsx" />
     <None Include="Tools.fsx" />
     <Content Include="Input\2021\day01.txt" />
@@ -78,6 +83,17 @@
     <Content Include="Input\2021\day25.txt" />
     <Content Include="Input\2021\day25_sample1.txt" />
     <Content Include="Input\2021\Day25_sample2.txt" />
+    <Content Include="Input\2022\Day14_sample1.txt" />
+    <Content Include="Input\2022\Day14.txt" />
+    <Content Include="Input\2022\Day13.txt" />
+    <Content Include="Input\2022\Day13_sample1.txt" />
+    <Content Include="Input\2022\Day12_sample1.txt" />
+    <Content Include="Input\2022\Day12.txt" />
+    <Content Include="Input\2022\Day11_Sample1.txt" />
+    <Content Include="Input\2022\Day11.txt" />
+    <Content Include="Input\2022\Day10_sample2.txt" />
+    <Content Include="Input\2022\Day10_sample1.txt" />
+    <Content Include="Input\2022\Day10.txt" />
     <Content Include="Input\2022\Day09_sample2.txt" />
     <Content Include="Input\2022\Day09.txt" />
     <Content Include="Input\2022\Day09_sample1.txt" />

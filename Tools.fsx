@@ -15,6 +15,8 @@ let split2 (sep : char) (s : string) =
     let split = s.Split(sep)
     split.[0], split.[1]
 
+let inline tupleize2 (a:array<'a>) = a.[0], a.[1]
+
 module SeqEx =
     let read n s =
         s |> Seq.take n, s |> Seq.skip n
