@@ -9,25 +9,12 @@ let mapTrace line =
     |> Array.map (split2 ',')
     |> Array.map (fun (s1,s2) -> Int32.Parse(s1), Int32.Parse(s2))
 
-let origin = 500,0
-
-let getInput p = 
-    File.ReadAllLines(getInputPath2022 p)
-    |> Seq.map mapTrace
-
 type Cell =
     | Rock
     | Sand
     | Air
 
-let printGrid (grid: Cell[,]) =
-    for r in [0..grid.GetLength(0) - 1] do
-        for c in [0..grid.GetLength(1) - 1] do
-            printf "%c" (match grid[r,c] with | Rock -> '#' | Sand -> 'O' | _ -> '.' )
-        printfn ""
-    ()
-
-let solve1 (traces: ((int*int) array)seq) =
+let mapGrid (traces: ((int*int) array)seq) =
     let cols = traces |> Seq.collect id |> Seq.map fst
     let rows = traces |> Seq.collect id |> Seq.map snd
     let minC = cols |> Seq.min
@@ -47,8 +34,68 @@ let solve1 (traces: ((int*int) array)seq) =
                     Array2D.set grid r translatedC Rock
         ))
 
+    grid, minC
+
+let getInput p = 
+    File.ReadAllLines(getInputPath2022 p)
+    |> Seq.map mapTrace
+    |> mapGrid
+
+let printGrid (grid: Cell[,]) =
+    for r in [0..grid.GetLength(0) - 1] do
+        for c in [0..grid.GetLength(1) - 1] do
+            printf "%c" (match grid[r,c] with | Rock -> '#' | Sand -> 'O' | _ -> '.' )
+        printfn ""
     grid
 
-getInput "Day14_sample1.txt"
+let rec sandFall (r,c) minC (grid:Cell[,]) =
+    let rMax = grid.GetLength(0) - 1
+    let tc = c - minC
+    
+    if r >= rMax then
+        printfn "Fell off the bottom %i %i" r rMax
+        printGrid grid |> ignore
+        None
+    else
+        match grid.[r+1,tc] with
+        | Air -> sandFall (r+1, c) minC grid
+        | _ ->
+            if tc-1 < 0 then
+                printfn "Fell off the left"
+                printGrid grid |> ignore
+                None
+            else
+                match grid.[r+1, tc-1] with
+                | Air -> sandFall (r+1, c-1) minC grid
+                | _ -> 
+                    if tc+1 > grid.GetLength(1) - 1 then
+                        printfn "Fell off the right"
+                        printGrid grid |> ignore
+                        None
+                    else
+                        match grid.[r+1, tc+1] with
+                        | Air -> sandFall (r+1, c+1) minC grid
+                        | _ -> 
+                            Array2D.set grid r tc Sand
+                            Some grid
+
+
+let letItFlow grid minC = seq {
+    let origin = 0, 500
+    let mutable counter = 0
+    while true do
+        let result = grid |> sandFall origin minC
+        if result.IsSome
+            then counter <- counter + 1
+        else    
+            printfn "%i" counter
+
+        yield result
+}
+
+let solve1 (grid,minC) =
+    letItFlow grid minC
+    |> Seq.find (fun a -> a.IsNone)
+
+getInput "Day14.txt"
 |> solve1
-|> printGrid
