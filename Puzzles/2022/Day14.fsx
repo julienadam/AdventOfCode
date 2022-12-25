@@ -9,93 +9,96 @@ let mapTrace line =
     |> Array.map (split2 ',')
     |> Array.map (fun (s1,s2) -> Int32.Parse(s1), Int32.Parse(s2))
 
-type Cell =
-    | Rock
-    | Sand
-    | Air
+type Cell = | Rock | Sand
+type Cells = System.Collections.Generic.Dictionary<(int*int), Cell>
+type Grid = {
+    cells: Cells
+    minC: int
+    maxC: int
+    maxR: int
+}
 
 let mapGrid (traces: ((int*int) array)seq) =
-    let cols = traces |> Seq.collect id |> Seq.map fst
-    let rows = traces |> Seq.collect id |> Seq.map snd
-    let minC = cols |> Seq.min
-    let maxC = cols |> Seq.max
-    let maxR = rows |> Seq.max
-
-    let grid = Array2D.init (maxR + 1) (maxC - minC + 1) (fun _ _ -> Air)
-
+    let grid = new Cells()
     traces |> Seq.iter (fun points -> 
         points 
         |> Seq.windowed 2
         |> Seq.iter (fun ps ->
             let (c1, r1), (c2, r2) = ps |> Seq.toArray |> tupleize2
             for c in [(min c1 c2)..(max c1 c2)] do
-                let translatedC = c - minC
                 for r in [(min r1 r2)..(max r1 r2)] do
-                    Array2D.set grid r translatedC Rock
+                    if grid.ContainsKey (r,c) then
+                        grid.[r,c] = Rock |> ignore
+                    else
+                        grid.Add((r,c), Rock) |> ignore
         ))
 
-    grid, minC
+    let minC = grid |> Seq.map (fun kvp -> kvp.Key |> snd) |> Seq.min
+    let maxC = grid |> Seq.map (fun kvp -> kvp.Key |> snd) |> Seq.max
+    let maxR = grid |> Seq.map (fun kvp -> kvp.Key |> fst) |> Seq.max
+    { cells = grid; minC = minC; maxC = maxC; maxR = maxR }
 
 let getInput p = 
     File.ReadAllLines(getInputPath2022 p)
     |> Seq.map mapTrace
     |> mapGrid
 
-let printGrid (grid: Cell[,]) =
-    for r in [0..grid.GetLength(0) - 1] do
-        for c in [0..grid.GetLength(1) - 1] do
-            printf "%c" (match grid[r,c] with | Rock -> '#' | Sand -> 'O' | _ -> '.' )
+let printGrid (grid: Grid) =
+    for r in [0..grid.maxR] do
+        for c in [grid.minC..grid.maxC] do
+            if grid.cells.ContainsKey (r,c) then
+                printf "%c" (match grid.cells[r,c] with | Rock -> '#' | Sand -> 'O' )
+            else
+                printf "%c" '.'
         printfn ""
     grid
 
-let rec sandFall (r,c) minC (grid:Cell[,]) =
-    let rMax = grid.GetLength(0) - 1
-    let tc = c - minC
-    
-    if r >= rMax then
-        printfn "Fell off the bottom %i %i" r rMax
+let rec sandFall (r,c) (grid:Grid) =
+    if r >= grid.maxR then
+        printfn "Fell off the bottom %i %i" r grid.maxR
         printGrid grid |> ignore
         None
     else
-        match grid.[r+1,tc] with
-        | Air -> sandFall (r+1, c) minC grid
+        match grid.cells.TryGetValue((r+1,c)) with
+        | false, _ -> sandFall (r+1, c) grid
         | _ ->
-            if tc-1 < 0 then
+            if c-1 < 0 then
                 printfn "Fell off the left"
                 printGrid grid |> ignore
                 None
             else
-                match grid.[r+1, tc-1] with
-                | Air -> sandFall (r+1, c-1) minC grid
+                match grid.cells.TryGetValue((r+1, c-1)) with
+                | false, _ -> sandFall (r+1, c-1) grid
                 | _ -> 
-                    if tc+1 > grid.GetLength(1) - 1 then
+                    if c+1 > grid.maxC then
                         printfn "Fell off the right"
                         printGrid grid |> ignore
                         None
                     else
-                        match grid.[r+1, tc+1] with
-                        | Air -> sandFall (r+1, c+1) minC grid
+                        match grid.cells.TryGetValue((r+1, c+1)) with
+                        | false, _ -> sandFall (r+1, c+1) grid
                         | _ -> 
-                            Array2D.set grid r tc Sand
+                            grid.cells.Add((r,c),Sand) |> ignore
                             Some grid
 
 
-let letItFlow grid minC = seq {
+let letItFlow grid = seq {
     let origin = 0, 500
     let mutable counter = 0
     while true do
-        let result = grid |> sandFall origin minC
+        let result = grid |> sandFall origin
         if result.IsSome
             then counter <- counter + 1
-        else    
+        else
             printfn "%i" counter
 
         yield result
 }
 
-let solve1 (grid,minC) =
-    letItFlow grid minC
+let solve1 grid =
+    letItFlow grid
     |> Seq.find (fun a -> a.IsNone)
 
 getInput "Day14.txt"
 |> solve1
+
