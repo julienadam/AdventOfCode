@@ -1,10 +1,6 @@
-open System.Collections.Generic
-open Tools.AStar
-
 
 #load "../../Tools.fsx"
 
-open System
 open System.IO
 open Tools
 
@@ -39,20 +35,42 @@ let getInput p =
     grid, start.Value, target.Value
 
 
-let grid, start, target = getInput "Day12_sample1.txt"
+let solve1 (grid : int[,], start, target) =
+    let getValidMoves (row, col) = 
+        let current = grid.[row, col]
+        grid 
+        |> Array2DTools.getAdjacent row col
+        |> Seq.where (fun (_,_,v) -> v <= current + 1)
+        |> Seq.map (fun (row, col, _) -> row, col)
 
-let getValidMoves (row, col) = 
-    let current = grid.[row, col]
-    grid 
-    |> Array2DTools.getAdjacent row col
-    |> Seq.where (fun (_,_,v) -> v <= current + 1)
-    |> Seq.map (fun (row, col, _) -> row, col)
+    let config : FullAStar.Config<int * int> = {
+        neighbours = getValidMoves
+        gCost = fun _ _ -> 1.0
+        fCost = fun (r1, c1) (r2, c2) -> manhattanDistance r1 c1 r2 c2
+        maxIterations = None
+    }
 
-let config : FullAStar.Config<int * int> = {
-    neighbours = getValidMoves
-    gCost = fun _ _ -> 1.0
-    fCost = fun (r1, c1) (r2, c2) -> manhattanDistance r1 c1 r2 c2
-    maxIterations = None
-}
+    let shortestPath = 
+        FullAStar.search start target config 
 
-let shortestPath = FullAStar.search start target config
+    match shortestPath with 
+    | Some i -> Some ((i |> Seq.length) - 1)
+    | _ -> None
+
+getInput "Day12.txt"
+|> solve1 
+|> Dump
+
+let solve2 (grid : int[,], _, target: int*int) =
+    let startingPoints =
+        grid 
+        |> Array2DTools.enumArray2d
+        |> Seq.filter (fun (_, _, v) -> v = 0)
+        |> Seq.map (fun (r,c,_) -> r, c)
+
+    startingPoints
+    |> Seq.choose (fun s -> solve1 (grid, s, target))
+    |> Seq.min
+
+getInput "Day12.txt"
+|> solve2
