@@ -119,7 +119,7 @@ let solve2Segments min max sensorAreas =
                 |> Seq.filter (fun x -> beacons.Contains (x,y) |> not)
                 |> Seq.map (fun x -> x,y)
                 )
-            |> Seq.exactlyOne
+            |> Seq.head
 
     // Final computation
     (xHole |> int64) * 4_000_000L + (yHole |> int64)
