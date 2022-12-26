@@ -15,6 +15,9 @@ let split2 (sep : char) (s : string) =
     let split = s.Split(sep)
     split.[0], split.[1]
 
+let splitIntList (input:string) = 
+    input.Split([|","|], StringSplitOptions.RemoveEmptyEntries) |> Array.map (fun s -> Int32.Parse s)
+
 let inline tupleize2 (a:array<'a>) = a.[0], a.[1]
 
 module SeqEx =
@@ -38,6 +41,7 @@ module Distance =
 [<AutoOpen>]
 module RegexTools =
     let inline mInt (groupName:string) (m:Match) = m.Groups.[groupName].Value |> int
+    let inline mStr (groupName:string) (m:Match) = m.Groups.[groupName].Value
 
 module AStar =
     type AStarNode<'a> = {
