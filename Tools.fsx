@@ -21,6 +21,11 @@ module SeqEx =
     let read n s =
         s |> Seq.take n, s |> Seq.skip n
 
+    let crossproduct l1 l2 = seq {
+        for el1 in l1 do
+            for el2 in l2 do
+                yield el1, el2 }
+
 [<AutoOpen>]
 module TupleTools =
     let inline swap2 (a,b) = (b,a)
