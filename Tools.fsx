@@ -29,6 +29,15 @@ module SeqEx =
             for el2 in l2 do
                 yield el1, el2 }
 
+    let rec combinations acc size set = seq {
+      match size, set with 
+      | n, x::xs -> 
+          if n > 0 then yield! combinations (x::acc) (n - 1) xs
+          if n >= 0 then yield! combinations acc n xs 
+      | 0, [] -> yield acc 
+      | _, [] -> () }
+    
+
 [<AutoOpen>]
 module TupleTools =
     let inline swap2 (a,b) = (b,a)
