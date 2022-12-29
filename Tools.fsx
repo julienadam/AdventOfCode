@@ -20,6 +20,8 @@ let splitIntList (input:string) =
 
 let inline tupleize2 (a:array<'a>) = a.[0], a.[1]
 
+let inline tupleize3 (a:array<'a>) = a.[0], a.[1], a.[2]
+
 module SeqEx =
     let read n s =
         s |> Seq.take n, s |> Seq.skip n

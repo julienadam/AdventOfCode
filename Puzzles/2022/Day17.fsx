@@ -83,7 +83,7 @@ let moveShapeLeft shape (r,c) tunnel =
     else (r, c-1)
 
 let moveShapeRight shape (r,c) tunnel =
-    if c > (6 - shape.HeightMap.Length) then (r,c) 
+    if c > (6 - shape.Width) then (r,c) 
     else if doesShapeHitSomething shape (r,c+1) tunnel then (r,c)
     else (r, c+1)
        
