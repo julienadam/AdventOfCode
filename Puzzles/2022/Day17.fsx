@@ -19,14 +19,14 @@ type Shape = {
     Name : string
     Blocks : (int*int) list
     MaxHeight : int
-    HeightMap : int[]
+    Width : int
 }
 
-let minusShape = { Name = "Minus"; Blocks = [(0,0);(0,1);(0,2);(0,3)]; MaxHeight = 1; HeightMap = [|1;1;1;1|] }
-let plusShape = { Name = "Plus"; Blocks = [(0,1);(1,0);(1,1);(1,2);(2,1)]; MaxHeight = 3; HeightMap = [|2;3;2|]  }
-let lShape = { Name = "L"; Blocks = [(0,0);(0,1);(0,2);(1,2);(2,2)]; MaxHeight = 3; HeightMap = [|1;1;3|] }
-let barShape = { Name = "Bar"; Blocks = [(0,0);(1,0);(2,0);(3,0)]; MaxHeight = 4; HeightMap = [|4|] }
-let squareShape = { Name = "Square"; Blocks = [(0,0);(0,1);(1,0);(1,1)]; MaxHeight = 2; HeightMap = [|2;2|]  }
+let minusShape = { Name = "Minus"; Blocks = [(0,0);(0,1);(0,2);(0,3)]; MaxHeight = 1; Width = 4 }
+let plusShape = { Name = "Plus"; Blocks = [(0,1);(1,0);(1,1);(1,2);(2,1)]; MaxHeight = 3; Width = 3  }
+let lShape = { Name = "L"; Blocks = [(0,0);(0,1);(0,2);(1,2);(2,2)]; MaxHeight = 3; Width = 3 }
+let barShape = { Name = "Bar"; Blocks = [(0,0);(1,0);(2,0);(3,0)]; MaxHeight = 4; Width = 1}
+let squareShape = { Name = "Square"; Blocks = [(0,0);(0,1);(1,0);(1,1)]; MaxHeight = 2; Width = 2}
 let shapeSequence = [| minusShape; plusShape; lShape; barShape; squareShape |]
 
 type Tunnel = {
