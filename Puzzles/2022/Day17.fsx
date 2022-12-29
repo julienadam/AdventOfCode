@@ -17,8 +17,8 @@ let getInput p =
 
 type Shape = {
     Name : string
-    Blocks : (int64*int) list
-    MaxHeight : int64
+    Blocks : (int*int) list
+    MaxHeight : int
     HeightMap : int[]
 }
 
@@ -30,30 +30,51 @@ let squareShape = { Name = "Square"; Blocks = [(0,0);(0,1);(1,0);(1,1)]; MaxHeig
 let shapeSequence = [| minusShape; plusShape; lShape; barShape; squareShape |]
 
 type Tunnel = {
-    grid : HashSet<int64*int>
-    mutable highest : int64
-    heightMap : List<int64>
-} with member this.GetRelativeHeightMap() =
+    grid : List<byte>
+    mutable highest : int
+    heightMap : List<int>
+} with 
+    member this.GetRelativeHeightMap() =
         this.heightMap |> Seq.map(fun h -> this.highest - h) |> Seq.toArray
+    member this.HasBlock r c =
+        if r > this.grid.Count - 1 then
+            false
+        else
+            let mask = (1uy <<< c)
+            (mask &&& this.grid.[r]) = mask
+    member this.AddBlock r c =
+        if r = this.grid.Count then
+            // Add a new line
+            this.grid.Add (1uy <<< c)
+        else if r < this.grid.Count then
+            // Update existing line
+            let mask = (1uy <<< c)
+            this.grid.[r] <- (mask ||| this.grid.[r])
+        else
+            failwithf "Could not add row at %i. current height is %i" r this.grid.Count
+
 
 let initTunnel() = 
     {
-        grid = new HashSet<int64*int>()
-        highest = 0L 
-        heightMap = new List<int64>([| 0L;0;0;0;0;0;0 |])
+        grid = new List<byte>()
+        highest = 0 
+        heightMap = new List<int>([| 0;0;0;0;0;0;0 |])
     }
 
 let display (t:Tunnel) = 
-    for r in t.highest .. -1L .. 0L  do
+    for r in t.highest .. -1 .. 0  do
         printf "|"
+        let bitmap = t.grid[r]
         for c = 0 to 6 do
-            printf "%c" (if t.grid.Contains(r,c) then '#' else '.')
+            let check = (1uy <<< c)
+            let isSet = (check &&& bitmap) = check
+            printf "%c" (if isSet then '#' else '.')
         printfn "|"
     printfn "+-------+"
 
-let doesShapeHitSomething shape (r,c) tunnel = 
+let doesShapeHitSomething shape (r,c) (tunnel:Tunnel) = 
     shape.Blocks |> Seq.exists(fun (br, bc) -> 
-        tunnel.grid.Contains(r + br, c + bc)
+        tunnel.HasBlock (r + br) (c + bc)
     )
         
 let moveShapeLeft shape (r,c) tunnel =
@@ -67,18 +88,17 @@ let moveShapeRight shape (r,c) tunnel =
     else (r, c+1)
        
 let canMoveShapeDown shape (r,c) tunnel =
-    if r = 0L then false
+    if r = 0 then false
     else 
-        not (doesShapeHitSomething shape (r-1L,c) tunnel)
+        not (doesShapeHitSomething shape (r-1,c) tunnel)
        
 let freezeShape shape (r,c) tunnel =
-    let nh = max tunnel.highest (r + shape.MaxHeight - 1L )
-    //printfn "new highest %i" nh
+    let nh = max tunnel.highest (r + shape.MaxHeight - 1 )
 
     shape.Blocks |> Seq.iter (fun (br,bc) ->
         let nr, nc = (r + br), (c + bc)
         // Update grid
-        tunnel.grid.Add(nr,nc) |> ignore
+        tunnel.AddBlock nr nc |> ignore
         // Update heightmap
         if nr > tunnel.heightMap.[nc] then
             tunnel.heightMap.[nc] <- nr
@@ -87,80 +107,74 @@ let freezeShape shape (r,c) tunnel =
     tunnel.highest <- nh
     tunnel
 
-let nt = 
-    initTunnel()
-    |> freezeShape plusShape (0L,1) 
-    |> freezeShape minusShape (3L,3) 
-nt.GetRelativeHeightMap() |> Dump
-nt |> display
-
 type StateKey = {
     ShapeIndex : int
     JetIndex : int
-    HeightMap : int64[]
+    HeightMap : int[]
 }
 
 type StateValue = {
     RocksFallen : int64
-    Highest : int64
+    Highest : int
 }
 
 type StatesMap = Dictionary<StateKey, StateValue>
 
-
-let loop maxRocks rockNb shapeIndex (r,c) tunnel (jets:Jet[]) index (states:StatesMap) =
-    let rec loopRec maxRocks rockNb shapeIndex (r,c) tunnel index =
-        if rockNb = maxRocks then
-            tunnel
-        else
-            let jet = jets.[index % jets.Length]
-            let shape = shapeSequence.[shapeIndex % shapeSequence.Length]
-            let (rn,cn) = 
-                match jet with
-                | Jet.Left -> 
-                    moveShapeLeft shape (r,c) tunnel
-                | Jet.Right -> 
-                    moveShapeRight shape (r,c) tunnel
+let loop maxRocks rockNb (r,c) tunnel (jets:Jet[]) (states:StatesMap) =
+    let rec loopRec maxRocks rockNb shapeIndex (r,c) tunnel jetIndex =
+        let actualJetIndex = jetIndex % jets.Length
+        let jet = jets.[actualJetIndex]
+        let actualShapeIndex = shapeIndex % shapeSequence.Length
+        let shape = shapeSequence.[actualShapeIndex]
+        let (rn,cn) = 
+            match jet with
+            | Jet.Left -> 
+                moveShapeLeft shape (r,c) tunnel
+            | Jet.Right -> 
+                moveShapeRight shape (r,c) tunnel
         
-            if canMoveShapeDown shape (rn, cn) tunnel then
-                loopRec maxRocks rockNb shapeIndex (rn-1L, cn) tunnel (index + 1)
-            else
-                if rockNb % 1_000_000L = 0L then
-                    printfn "Rock #%i out of %i falling, states map has %i" rockNb maxRocks states.Count
+        if canMoveShapeDown shape (rn, cn) tunnel then
+            loopRec maxRocks rockNb shapeIndex (rn-1, cn) tunnel (jetIndex + 1)
+        else
+            let nextTunnel = freezeShape shape (rn, cn) tunnel
+            let newState = { ShapeIndex = actualShapeIndex; JetIndex = actualJetIndex; HeightMap = tunnel.GetRelativeHeightMap() }
             
-                let nextTunnel = freezeShape shape (rn, cn) tunnel
-                let newState = { ShapeIndex = shapeIndex; JetIndex = index; HeightMap = tunnel.GetRelativeHeightMap() }
-            
-                // Check state map for a duplicate
-                match states.TryGetValue(newState) with
-                | true, similarPastState -> 
-                    printfn "Cycle found between %i and %i" similarPastState.RocksFallen rockNb
-                    failwithf "Have to compute"
-                | _ -> 
-                    // If not found, add the state to the map and continue
-                    states.Add(newState, { RocksFallen = rockNb; Highest = tunnel.highest })
-                    let pos = nextTunnel.highest + 3L + 1L, 2
-                    loopRec maxRocks (rockNb + 1L) (shapeIndex + 1) pos nextTunnel (index + 1)
-    loopRec maxRocks rockNb shapeIndex (r,c) tunnel index
+            // Check state map for a duplicate
+            match states.TryGetValue(newState) with
+            | true, similarPastState -> 
+                printfn "Cycle found between %i and %i" similarPastState.RocksFallen rockNb
+                let cycleHeight = int64(nextTunnel.highest - similarPastState.Highest)
+                let cycleLength = (rockNb - similarPastState.RocksFallen)
+                let remainingRocks = (maxRocks - similarPastState.RocksFallen) % int64(cycleLength)
+                let numFullCycles = (maxRocks - similarPastState.RocksFallen) / int64(cycleLength)
+
+                // Look in the cache to find the height after 
+                // similarPastState.RocksFallen + remainder rocks dropped
+                let outOfCycleState =
+                    states 
+                    |> Seq.find (fun kvp -> kvp.Value.RocksFallen = (similarPastState.RocksFallen + remainingRocks))
+
+                let result =
+                    int64(outOfCycleState.Value.Highest) +
+                    numFullCycles * cycleHeight
+                result
+            | _ -> 
+                // If not found, add the state to the map and continue
+                states.Add(newState, { RocksFallen = rockNb; Highest = nextTunnel.highest })
+                let pos = nextTunnel.highest + 3 + 1, 2
+                loopRec maxRocks (rockNb + 1L) (shapeIndex + 1) pos nextTunnel (jetIndex + 1)
+    loopRec maxRocks rockNb 0 (r,c) tunnel 0
 
 let solve1 input =
     let instructions = getInput input
-    let result = (loop 2023L 1L 0 (3, 2) (initTunnel()) instructions 0) (new StatesMap())
-    result |> display
-    result.highest + 1L
+    let result = (loop 2023L 1L  (3, 2) (initTunnel()) instructions ) (new StatesMap())
+    result
 
-// solve1 "day17.txt"
+solve1 "day17.txt"
 
 let solve2 input =
     let instructions = getInput input
-    let result = (loop 1000_000_000_001L 1L 0 (3, 2) (initTunnel()) instructions 0) (new StatesMap())
-    result.highest + 1L
+    let result = (loop 1000_000_000_001L 1L (3, 2) (initTunnel()) instructions ) (new StatesMap())
+    result
 
-solve2 "day17_sample1.txt"
-
-// Not going to bruteforce it
-// TODO Record state (jet index, shape index, height map for each column (adjusted to 0)
-// TODO Find a cycle, compute the cycle state closest to the end
-// TODO then let the rest play normally
-
-(File.ReadAllText(getInputPath2022 "Day17.txt")).Length
+solve2 "day17.txt"
