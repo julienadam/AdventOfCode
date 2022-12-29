@@ -70,7 +70,7 @@ let solve2 grid =
     countFaces ([(0,0,0)] |> Set.ofList) Set.empty grid 0
 
 getInput "Day18.txt"
-|> Sol
+|> solve2
 
 
 
