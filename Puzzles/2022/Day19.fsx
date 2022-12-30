@@ -14,7 +14,6 @@ type Ore = int
 type Clay = int
 type Obsidian = int
 
-
 type Blueprint = {
     id: int
     ore : Ore
@@ -80,7 +79,6 @@ type Constraints = {
 }
 
 let pickBuildOptions (blueprint:Blueprint) (state:State) (constraints:Constraints)= seq {
-    // TODO : Always build a geode bot if possible (could lead to wrong solutions ?)
     match blueprint.geode with
     | ore, obsidian when state.ore >= ore && state.obsidian >= obsidian ->
         yield { state with geodeBots = state.geodeBots + 1; ore = state.ore - ore; obsidian = state.obsidian - obsidian }
@@ -117,6 +115,10 @@ let pickBuildOptions (blueprint:Blueprint) (state:State) (constraints:Constraint
 
 // TODO : more heuristics ?
 
+let producableUntilEnd n =
+    [1..n] 
+    |> Seq.fold (fun s i -> s + i) 0
+
 let maxGeodesForBlueprint (blueprint:Blueprint) maxMinutes =
     let memo = new Dictionary<State*int, int>();
     let mutable counter = 0
@@ -131,11 +133,11 @@ let maxGeodesForBlueprint (blueprint:Blueprint) maxMinutes =
         maxUsableObsidianBots = geoObsCost
     }
     let printProgress _ =
-        printfn "Blueprint %i Explored %i, memo size %i, memo hit count %i, best %i cut %i" blueprint.id counter memo.Count hitCount best cut
+        printfn "Blueprint %i explored %i, memo size %i, memo hit count %i, best %i cut %i" blueprint.id counter memo.Count hitCount best cut
     use timer = new Timer(printProgress, null, 0, 1000)
     
     let rec maxGeodesForBlueprintRec blueprint (state:State) minute =
-        let collected = state.Collect()
+        let (no, nc, nob, ng) = state.Collect()
         counter <- counter + 1
         match memo.TryGetValue((state, minute)) with
         | true, v ->
@@ -145,16 +147,18 @@ let maxGeodesForBlueprint (blueprint:Blueprint) maxMinutes =
             let result =
                 if minute = maxMinutes then
                     // Last collection !
-                    let result = state.Update(collected).geode
+                    let result = state.Update((no, nc, nob, ng)).geode
                     if result > best then
                         // Store best
-                        best <- state.Update(collected).geode
+                        best <- state.Update((no, nc, nob, ng)).geode
                     result
                 else
                     // Cut short if not a chance to best the leading score
                     let remainingTurns = maxMinutes - minute
                     let bestPossibleScore = 
-                        state.geode + state.geodeBots * remainingTurns + ([1..remainingTurns] |> List.sum)
+                        state.geode + ng + // Current geodes, including the ones from this turn
+                        (state.geodeBots * remainingTurns) + // current bots mining until end
+                        (producableUntilEnd (remainingTurns)) // 1 more bot until the end producing
                     if bestPossibleScore < best then
                         cut <- cut + 1
                         0
@@ -162,10 +166,10 @@ let maxGeodesForBlueprint (blueprint:Blueprint) maxMinutes =
                         let buildOptions = pickBuildOptions blueprint state constraints
                         buildOptions 
                         |> Seq.map (fun buildState ->
-                            maxGeodesForBlueprintRec blueprint (buildState.Update(collected)) (minute + 1)
+                            maxGeodesForBlueprintRec blueprint (buildState.Update((no, nc, nob, ng))) (minute + 1)
                         )
                         |> Seq.max
-            //memo.Add((state, minute), result)
+            memo.Add((state, minute), result)
             result
     maxGeodesForBlueprintRec blueprint (initState()) 1 
 
@@ -176,14 +180,19 @@ let solve1 blueprints =
     |> Seq.sum
 
 
-getInput "Day19.txt"
-|> solve1
+//getInput "Day19.txt"
+//|> solve1
 
-let bp = 
+let bp1 = 
     getInput "Day19_sample1.txt"
     |> Seq.head
+let bp2 = 
+    getInput "Day19_sample1.txt"
+    |> Seq.skip 1
+    |> Seq.head
 
-maxGeodesForBlueprint bp 32
+maxGeodesForBlueprint bp1 32
+maxGeodesForBlueprint bp2 32
 
 let solve2 blueprints =
     let result = 
@@ -194,50 +203,6 @@ let solve2 blueprints =
     result.[0] * result.[1] * result.[2]
 
 getInput "Day19.txt"
-|> solve1
+|> solve2
 
 
-//maxGeodesForBlueprint bp1 (initState()) 1
-
-
-//let optimumState =
-//    match minute with
-//    | 3 -> buildOptions |> Seq.find (fun s -> s.clayBots = state.clayBots + 1)
-//    | 5 -> buildOptions |> Seq.find (fun s -> s.clayBots = state.clayBots + 1)
-//    | 7 -> buildOptions |> Seq.find (fun s -> s.clayBots = state.clayBots + 1)
-//    | 11 -> buildOptions |> Seq.find (fun s -> s.obsidianBots = state.obsidianBots + 1)
-//    | 12 -> buildOptions |> Seq.find (fun s -> s.clayBots = state.clayBots + 1)
-//    | 15 -> buildOptions |> Seq.find (fun s -> s.obsidianBots = state.obsidianBots + 1)
-//    | 18 -> buildOptions |> Seq.find (fun s -> s.geodeBots = state.geodeBots + 1)
-//    | 21 -> buildOptions |> Seq.find (fun s -> s.geodeBots = state.geodeBots + 1)
-//    | _ -> state
-//maxGeodesForBlueprint blueprint (optimumState.Update(collected)) (minute + 1)
-
-
-
-//let optimumState =
-//    match minute with
-//    | 5 -> buildOptions |> Seq.find (fun s -> s.oreBots = state.oreBots + 1)
-//    | 7 -> buildOptions |> Seq.find (fun s -> s.clayBots = state.clayBots + 1)
-//    | 8 -> buildOptions |> Seq.find (fun s -> s.clayBots = state.clayBots + 1)
-//    | 9 -> buildOptions |> Seq.find (fun s -> s.clayBots = state.clayBots + 1)
-//    | 10 -> buildOptions |> Seq.find (fun s -> s.clayBots = state.clayBots + 1)
-//    | 11 -> buildOptions |> Seq.find (fun s -> s.clayBots = state.clayBots + 1)
-//    | 12 -> buildOptions |> Seq.find (fun s -> s.clayBots = state.clayBots + 1)
-//    | 13 -> buildOptions |> Seq.find (fun s -> s.clayBots = state.clayBots + 1)
-//    | 14 -> buildOptions |> Seq.find (fun s -> s.obsidianBots = state.obsidianBots + 1)
-//    | 16 -> buildOptions |> Seq.find (fun s -> s.obsidianBots = state.obsidianBots + 1)
-//    | 17 -> buildOptions |> Seq.find (fun s -> s.obsidianBots = state.obsidianBots + 1)
-//    | 19 -> buildOptions |> Seq.find (fun s -> s.obsidianBots = state.obsidianBots + 1)
-//    | 20 -> buildOptions |> Seq.find (fun s -> s.geodeBots = state.geodeBots + 1)
-//    | 21 -> buildOptions |> Seq.find (fun s -> s.obsidianBots = state.obsidianBots + 1)
-//    | 22 -> buildOptions |> Seq.find (fun s -> s.geodeBots = state.geodeBots + 1)
-//    | 23 -> buildOptions |> Seq.find (fun s -> s.geodeBots = state.geodeBots + 1)
-//    | 24 -> buildOptions |> Seq.find (fun s -> s.geodeBots = state.geodeBots + 1)
-//    | 26 -> buildOptions |> Seq.find (fun s -> s.geodeBots = state.geodeBots + 1)
-//    | 27 -> buildOptions |> Seq.find (fun s -> s.geodeBots = state.geodeBots + 1)
-//    | 29 -> buildOptions |> Seq.find (fun s -> s.geodeBots = state.geodeBots + 1)
-//    | 30 -> buildOptions |> Seq.find (fun s -> s.geodeBots = state.geodeBots + 1)
-//    | 31 -> buildOptions |> Seq.find (fun s -> s.geodeBots = state.geodeBots + 1)
-//    | _ -> state
-//maxGeodesForBlueprintRec blueprint (optimumState.Update(collected)) (minute + 1)
