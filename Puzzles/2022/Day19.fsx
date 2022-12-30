@@ -50,6 +50,9 @@ type State = {
     clayBots : int
     obsidianBots : int
     geodeBots : int
+    skippedOre : bool
+    skippedClay : bool
+    skippedObsidian : bool
 } with 
     member this.Collect () = this.oreBots, this.clayBots, this.obsidianBots, this.geodeBots
     member this.Update (ore, clay, obsidian, geodes) = 
@@ -60,16 +63,41 @@ type State = {
                 obsidian = this.obsidian + obsidian
                 geode = this.geode + geodes
         }
+    member this.BuyObsidianBot(orePrice, clayPrice) =
+        {
+            this with 
+                obsidianBots = this.obsidianBots + 1
+                ore = this.ore - orePrice
+                clay = this.clay - clayPrice
+                skippedObsidian = false; skippedClay = false; skippedOre = false
+        }
+    member this.BuyClayBot(orePrice) = 
+        { 
+            this with 
+                clayBots = this.clayBots + 1
+                ore = this.ore - orePrice 
+                skippedObsidian = false; skippedClay = false; skippedOre = false
+        }
+    member this.BuyOreBot(orePrice) = 
+        { 
+            this with 
+                oreBots = this.oreBots + 1
+                ore = this.ore - orePrice 
+                skippedObsidian = false; skippedClay = false; skippedOre = false
+        }
+    member this.BuyGeodeBot(orePrice, obsidianPrice) =
+        { 
+            this with
+                geodeBots = this.geodeBots + 1
+                ore = this.ore - orePrice
+                obsidian = this.obsidian - obsidianPrice 
+                skippedObsidian = false; skippedClay = false; skippedOre = false
+        }
 
 let initState () = {
-    ore = 0
-    clay = 0
-    obsidian = 0
-    geode = 0
-    oreBots = 1
-    clayBots  = 0
-    obsidianBots = 0
-    geodeBots = 0
+    ore = 0; clay = 0; obsidian = 0; geode = 0
+    oreBots = 1; clayBots  = 0; obsidianBots = 0; geodeBots = 0
+    skippedOre = false; skippedClay = false; skippedObsidian = false
 }
 
 type Constraints = {
@@ -79,38 +107,41 @@ type Constraints = {
 }
 
 let pickBuildOptions (blueprint:Blueprint) (state:State) (constraints:Constraints)= seq {
+    let shouldBuyObsidian (ore, clay) =
+        state.ore >= ore 
+        && state.clay >= clay 
+        && state.obsidianBots < constraints.maxUsableObsidianBots 
+        && (not state.skippedObsidian)
+
+    let shoudBuyClay ore =
+        state.ore >= ore 
+        && state.clayBots < constraints.maxUsableClayBots 
+        && (not state.skippedClay)
+
+    let shouldBuyOre ore =
+        state.ore >= ore 
+        && state.oreBots < constraints.maxUsableOreBots 
+        && (not state.skippedOre)
+
     match blueprint.geode with
     | ore, obsidian when state.ore >= ore && state.obsidian >= obsidian ->
-        yield { state with geodeBots = state.geodeBots + 1; ore = state.ore - ore; obsidian = state.obsidian - obsidian }
+        yield state.BuyGeodeBot(ore, obsidian)
     | _ ->
-        let canBuildObs =
-            match blueprint.obsidian with // don't build more than necessary for any bot
-            | ore, clay when state.ore >= ore && state.clay >= clay && state.obsidianBots < constraints.maxUsableObsidianBots -> 
-                Some { state with obsidianBots = state.obsidianBots + 1; ore = state.ore - ore; clay = state.clay - clay }
-            | _ -> None
+        let canBuildObs = if shouldBuyObsidian blueprint.obsidian then Some (state.BuyObsidianBot blueprint.obsidian) else None
         if canBuildObs.IsSome then
             yield canBuildObs.Value
 
-        let canBuildClay = 
-            match blueprint.clay with // don't build more than necessary for any bot
-            | ore when state.ore >= ore && state.clayBots < constraints.maxUsableClayBots ->
-                Some { state with clayBots = state.clayBots + 1; ore = state.ore - ore }
-            | _ -> None
-        
+        let canBuildClay = if shoudBuyClay(blueprint.clay) then Some (state.BuyClayBot(blueprint.clay)) else None
         if canBuildClay.IsSome then
             yield canBuildClay.Value
 
-        let canBuildOre =
-            match blueprint.ore with // don't build more than necessary for any bot
-            | ore when state.ore >= ore && state.oreBots < constraints.maxUsableOreBots ->
-                Some { state with oreBots = state.oreBots + 1; ore = state.ore - ore }
-            | _ -> None
+        let canBuildOre = if shouldBuyOre(blueprint.ore) then Some (state.BuyOreBot(blueprint.ore)) else None
         if canBuildOre.IsSome then
             yield canBuildOre.Value
 
         // Don't wait if all options are available
         if canBuildObs.IsNone || canBuildClay.IsNone || canBuildOre.IsNone then
-            yield state
+            yield { state with skippedObsidian = canBuildObs.IsSome; skippedClay = canBuildClay.IsSome; skippedOre = canBuildOre.IsSome }
 }
 
 // TODO : more heuristics ?
@@ -137,7 +168,7 @@ let maxGeodesForBlueprint (blueprint:Blueprint) maxMinutes =
     use timer = new Timer(printProgress, null, 0, 1000)
     
     let rec maxGeodesForBlueprintRec blueprint (state:State) minute =
-        let (no, nc, nob, ng) = state.Collect()
+        let collected = state.Collect()
         counter <- counter + 1
         match memo.TryGetValue((state, minute)) with
         | true, v ->
@@ -147,12 +178,13 @@ let maxGeodesForBlueprint (blueprint:Blueprint) maxMinutes =
             let result =
                 if minute = maxMinutes then
                     // Last collection !
-                    let result = state.Update((no, nc, nob, ng)).geode
+                    let result = state.Update(collected).geode
                     if result > best then
                         // Store best
-                        best <- state.Update((no, nc, nob, ng)).geode
+                        best <- state.Update(collected).geode
                     result
                 else
+                    let _,_,_,ng = collected
                     // Cut short if not a chance to best the leading score
                     let remainingTurns = maxMinutes - minute
                     let bestPossibleScore = 
@@ -166,7 +198,7 @@ let maxGeodesForBlueprint (blueprint:Blueprint) maxMinutes =
                         let buildOptions = pickBuildOptions blueprint state constraints
                         buildOptions 
                         |> Seq.map (fun buildState ->
-                            maxGeodesForBlueprintRec blueprint (buildState.Update((no, nc, nob, ng))) (minute + 1)
+                            maxGeodesForBlueprintRec blueprint (buildState.Update(collected)) (minute + 1)
                         )
                         |> Seq.max
             memo.Add((state, minute), result)
@@ -191,8 +223,8 @@ let bp2 =
     |> Seq.skip 1
     |> Seq.head
 
-maxGeodesForBlueprint bp1 32
-maxGeodesForBlueprint bp2 32
+//maxGeodesForBlueprint bp1 32
+//maxGeodesForBlueprint bp2 32
 
 let solve2 blueprints =
     let result = 
