@@ -59,8 +59,7 @@ module Part1 =
             let leftNumber = compute monkeys monkeys.[l]
             let rightNumber = compute monkeys monkeys.[r]
             op leftNumber rightNumber
-        | _ -> failwithf "Not for this part"
-    
+
     let solve1 (monkeys:Map<string,Monkey>) =
     
         let root = monkeys["root"]
@@ -115,7 +114,6 @@ module Part2 =
             match coeff with
             | [|num;den|] -> Rational.simplify variable (Algebraic.expand -num / den)
             | _ -> failwith "Cannot solve"
-
 
     let solve2 (monkeys:Map<string,Monkey>) =
         let root = monkeys["root"]
