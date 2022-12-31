@@ -35,7 +35,7 @@ let parseMonkey line =
         if m.Groups.["m1"].Success = false then
            m|> mInt64 "num" |> Number
         else
-            (m |> mStr "m1", m|>mStr "op" |> Dump |> parseOp, m |> mStr "m2") |> MathOp
+            (m |> mStr "m1", m|>mStr "op" |> parseOp, m |> mStr "m2") |> MathOp
     { 
         name = m |> mStr "monkey"
         yell = yell
@@ -44,7 +44,20 @@ let parseMonkey line =
 let getInput p =
     File.ReadAllLines(getInputPath2022 p)
     |> Seq.map parseMonkey
-    |> Seq.toArray
+    |> Seq.map (fun m -> m.name, m)
+    |> Map.ofSeq
+
+let rec compute (monkeys:Map<string,Monkey>) current =
+    match current.yell with
+    | Number n -> n
+    | MathOp (l, op, r) ->
+        let leftNumber = compute monkeys monkeys.[l]
+        let rightNumber = compute monkeys monkeys.[r]
+        op leftNumber rightNumber
+
+let solve1 (monkeys:Map<string,Monkey>) =
+    let root = monkeys["root"]
+    compute monkeys root
 
 getInput "Day21.txt"
-//|> solve1
+|> solve1
