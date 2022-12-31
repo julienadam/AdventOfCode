@@ -18,6 +18,7 @@ type MapCell =
     | Wall
     | Open
 
+
 let regex = new Regex"(\d+|R|L)"
 
 let parseInstructions input : seq<Instr>= seq {
@@ -40,12 +41,15 @@ let parseMap input = seq {
             | _ -> ()
 }
 
+let getStartingCell (input:string) = 
+    (0, input.IndexOf('.'))
+
 let getInput p =
     let map, instructions = 
         File.ReadAllText(getInputPath2022 p)
         |> ssplit (sprintf "%s%s" nl nl)
         |> tupleize2
-    map |> parseMap |> Map.ofSeq, instructions |> parseInstructions |> Seq.toList
+    map |> parseMap |> Map.ofSeq, map |> getStartingCell, instructions |> parseInstructions |> Seq.toList
 
 getInput "Day22_sample1.txt"
 |> Dump
