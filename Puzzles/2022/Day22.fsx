@@ -132,16 +132,16 @@ let getInput p =
     map |> parseMap, map |> getStartingCell, instructions |> parseInstructions |> Seq.toList
 
 
-let solve1 ((map:MapCell[,]),(startRow, startCol),(instructions:Instr list)) =
+let solve ((map:MapCell[,]),(startRow, startCol),(instructions:Instr list)) wrapper=
     let finalState =
         instructions |> Seq.fold (fun (state:State) instr ->
             printfn "%A" instr
             let nextState = 
                 match instr with
-                | Forward x -> state.Forward x map Part1.wrap
+                | Forward x -> state.Forward x map wrapper
                 | TurnLeft -> state.Left()
                 | TurnRight -> state.Right()
-            // nextState.Print map
+            nextState.Print map
             nextState
         ) { row = startRow; col = startCol; direction = East }
         |> Dump
@@ -150,11 +150,46 @@ let solve1 ((map:MapCell[,]),(startRow, startCol),(instructions:Instr list)) =
     1000 * (finalState.row + 1) + 4 * (finalState.col + 1) + dirScore
 
 
-getInput "Day22.txt"
-//|> Dump
-|> solve1
+let solve1 m = solve m Part1.wrap
 
-// Part 2
-// Need to include direction in wrap function
-// Refactor Part1 to take a wrap func in the move func
-// DONE : Need to extract the cube size from the map, just width / 2
+//getInput "Day22.txt"
+//|> solve1
+
+module Part2 =
+    let wrapOnCol (row, col) (map:MapCell[,]) r =
+        match map[r, col] with
+        | MapCell.Wall -> Some (row, col)
+        | MapCell.Open -> Some (r, col)
+        | _ -> None
+
+    let wrapNorth (row, col) (map:MapCell[,]) =
+        ([map |> maxR .. -1 .. 0] |> Seq.pick (wrapOnCol (row, col) map)), North
+
+    let wrapSouth (row, col) (map:MapCell[,]) =
+        ([0..map |> maxR] |> Seq.pick (wrapOnCol (row, col) map)), South
+
+    let wrapOnRow (row, col) (map:MapCell[,]) c =
+        match map[row, c] with 
+        | MapCell.Wall -> Some (row, col)
+        | MapCell.Open -> Some (row, c)
+        | _ -> None
+
+    let wrapEast (row,col) (map:MapCell[,]) =
+        ([0..map |> maxC] |> Seq.pick (wrapOnRow (row,col) map)), East
+
+    let wrapWest (row,col) (map:MapCell[,]) =
+        
+        ([map |> maxC .. -1 .. 0] |> Seq.pick (wrapOnRow (row,col) map)), West
+
+    let wrap = function | North -> wrapNorth | South -> wrapSouth | East -> wrapEast | West -> wrapWest
+
+let solve2 ((map:MapCell[,]),(startRow, startCol),(instructions:Instr list)) = 
+    let totalChars = map |> Array2DTools.enumArray2d |> Seq.filter(fun (_,_,cell) -> match cell with | Void -> false | _ -> true) |> Seq.length 
+    Math.Sqrt((float) (totalChars / 6)) |> Dump
+    
+    solve ((map:MapCell[,]),(startRow, startCol),(instructions:Instr list)) Part2.wrap
+
+getInput "Day22_sample1.txt"
+//|> Dump
+|> solve2
+
