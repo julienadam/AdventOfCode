@@ -14,123 +14,91 @@ type Instr =
     | TurnRight
     | TurnLeft
 
-type MapCell =
-    | Wall
-    | Open
-    | Void
+type MapCell = | Wall | Open | Void
 
 type State = {
-    row : int
-    col : int
+    row : int; col : int
     direction : Direction
 } with 
-    member this.Left () =
-        let next = 
-            match this.direction with
-            | North -> West
-            | East -> North
-            | South -> East
-            | West -> South
-        { this with direction = next }
-    member this.Right () =
-        let next = 
-            match this.direction with
-            | North -> East
-            | East -> South
-            | South ->  West
-            | West ->  North
-        { this with direction = next }
+    member this.Left () = { this with direction = this.direction.TurnLeft() }
+    member this.Right () = { this with direction = this.direction.TurnRight() }
+    member this.maxR map = (map |> Array2D.length1) - 1
+    member this.maxC map = (map |> Array2D.length2) - 1
+    
+    member private this.wrapOnCol (row, col) (map:MapCell[,]) r =
+        match map[r, col] with
+        | MapCell.Wall -> Some (row, col)
+        | MapCell.Open -> Some (r, col)
+        | _ -> None
 
     member private this.wrapNorth (row, col) (map:MapCell[,]) =
-        [((map |> Array2D.length1) - 1) .. -1 .. 0] |> Seq.pick (fun r ->
-            if map[r, col] = MapCell.Wall then
-                Some (row, col)
-            else if map[r, col] = MapCell.Open then
-                Some (r, col)
-            else
-                None
-        )
+        [map |> this.maxR .. -1 .. 0] |> Seq.pick (this.wrapOnCol (row, col) map)
 
     member private this.wrapSouth (row, col) (map:MapCell[,]) =
-        [0..(map |> Array2D.length1) - 1] |> Seq.pick (fun r ->
-            if map[r, col] = MapCell.Wall then
-                Some (row, col)
-            else if map[r, col] = MapCell.Open then
-                Some (r, col)
-            else
-                None
-        )
+        [0..map |> this.maxR] |> Seq.pick (this.wrapOnCol (row, col) map)
+
+    member private this.wrapOnRow (row, col) (map:MapCell[,]) c =
+        match map[row, c] with 
+        | MapCell.Wall -> Some (row, col)
+        | MapCell.Open -> Some (row, c)
+        | _ -> None
 
     member private this.wrapEast (row,col) (map:MapCell[,]) =
-        [0..(map |> Array2D.length2) - 1] |> Seq.pick (fun c ->
-            if map[row, c] = MapCell.Wall then
-                Some (row, col)
-            else if map[row, c] = MapCell.Open then
-                Some (row, c)
-            else
-                None
-        )
+        [0..map |> this.maxC] |> Seq.pick (this.wrapOnRow (row,col) map)
 
     member private this.wrapWest (row,col) (map:MapCell[,]) =
-        [(map |> Array2D.length2) - 1 .. -1 .. 0] |> Seq.pick (fun c ->
-            if map[row, c] = MapCell.Wall then
-                Some (row, col)
-            else if map[row, c] = MapCell.Open then
-                Some (row, c)
-            else
-                None
-        )
-        
-    member this.MoveNorth (r,c) (map:MapCell[,])=
+        [map |> this.maxC .. -1 .. 0] |> Seq.pick (this.wrapOnRow (row,col) map)
+
+    member this.MoveNorth (r,c) (map:MapCell[,]) wrapFunc=
         if r = 0 then
-            this.wrapNorth (r,c) map
+            wrapFunc (r,c) map
         else
             match map[r - 1, c] with
             | Open -> (r - 1, c)
-            | Void -> this.wrapNorth (r,c) map
+            | Void -> wrapFunc (r,c) map
             | Wall -> (r, c)
                 
-    member this.MoveSouth (r,c) (map:MapCell[,])=
-        if r = (map |> Array2D.length1) - 1 then
-            this.wrapSouth (r,c) map
+    member this.MoveSouth (r,c) (map:MapCell[,]) wrapFunc =
+        if r = this.maxR map then
+            wrapFunc (r,c) map
         else
             match map[r + 1, c] with
             | Open -> (r + 1, c)
-            | Void -> this.wrapSouth (r,c) map
+            | Void -> wrapFunc (r,c) map
             | Wall -> (r, c)
             
-    member this.MoveEast (r,c) (map:MapCell[,])=
-        if c = (map |> Array2D.length2) - 1 then
-            this.wrapEast (r,c) map
+    member this.MoveEast (r,c) (map:MapCell[,]) wrapFunc=
+        if c = this.maxC map then
+            wrapFunc (r,c) map
         else
             match map[r, c + 1] with
             | Open -> (r, c + 1)
-            | Void -> this.wrapEast (r,c) map
+            | Void -> wrapFunc (r,c) map
             | Wall -> (r, c)
 
-    member this.MoveWest (r,c) (map:MapCell[,])=
+    member this.MoveWest (r,c) (map:MapCell[,]) wrapFunc=
         if c = 0 then
-            this.wrapWest (r,c) map
+            wrapFunc (r,c) map
         else
             match map[r, c - 1] with
             | Open -> (r, c - 1)
-            | Void -> this.wrapWest (r,c) map
+            | Void -> wrapFunc (r,c) map
             | Wall -> (r, c)
 
-    member this.Move x moveFunc (map:MapCell[,]) = [1..x] |> Seq.fold (fun (r,c) _ -> moveFunc (r,c) map) (this.row, this.col)
+    member this.Move x moveFunc (map:MapCell[,]) wrapFunc = [1..x] |> Seq.fold (fun (r,c) _ -> moveFunc (r,c) map wrapFunc) (this.row, this.col)
 
     member this.Forward x (map:MapCell[,]) =
         let (r,c) = 
             match this.direction with
-            | North -> this.Move x this.MoveNorth map
-            | South -> this.Move x this.MoveSouth map
-            | East -> this.Move x this.MoveEast map
-            | West -> this.Move x this.MoveWest map
+            | North -> this.Move x this.MoveNorth map this.wrapNorth
+            | South -> this.Move x this.MoveSouth map this.wrapSouth
+            | East -> this.Move x this.MoveEast map this.wrapEast
+            | West -> this.Move x this.MoveWest map this.wrapWest
         {this with row = r; col = c}
 
     member this.Print (map:MapCell[,]) =
-        for r = 0 to (map |> Array2D.length1) - 1 do
-            for c = 0 to (map |> Array2D.length2) - 1 do
+        for r = 0 to map |> this.maxR do
+            for c = 0 to map |> this.maxC do
                 if (r,c) = (this.row, this.col) then
                     printf "%c" (match this.direction with | North -> '>' | South -> 'v' | East -> '>' | West -> '<')
                 else
@@ -196,3 +164,8 @@ let solve1 ((map:MapCell[,]),(startRow, startCol),(instructions:Instr list)) =
 getInput "Day22.txt"
 //|> Dump
 |> solve1
+
+// Part 2
+// Need to include direction in wrap function
+// Refactor Part1 to take a wrap func in the move func
+// DONE : Need to extract the cube size from the map, just width / 2
