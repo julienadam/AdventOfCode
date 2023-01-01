@@ -100,7 +100,10 @@ module Array2DTools =
             printfn ""
             if i % 10 = 9 then
                 printfn ""
-        
+    
+    let maxR grid = (grid |> Array2D.length1) - 1
+    let maxC grid = (grid |> Array2D.length2) - 1
+
 module Queues =
     type queue<'a> =
         | Queue of 'a list * 'a list
