@@ -119,6 +119,13 @@ module Queues =
             let bs = List.rev fs
             bs.Head, Queue([], bs.Tail)
 
+            
+type Direction =
+| North
+| East
+| South
+| West
+
 type Compass =
 | Up
 | Down
