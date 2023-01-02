@@ -3,6 +3,7 @@
 open System
 open System.IO
 open System.Text.RegularExpressions
+open System.Collections.Generic
 
 [<AutoOpen>]
 module Tools =
@@ -50,6 +51,12 @@ module TupleTools =
     let inline swap2 (a,b) = (b,a)
 
 [<AutoOpen>]
+module KeyValuePairTools =
+    let kvpKey (kvp:KeyValuePair<'a, _>) = kvp.Key
+    let kvpValue (kvp:KeyValuePair<_,'a>) = kvp.Value
+
+
+[<AutoOpen>]
 module Distance =
     let inline manhattanDistance (x1:int) (y1:int) (x2:int) (y2:int) = Math.Abs(x1 - x2) + Math.Abs(y1 - y2)
     let inline manhattanDistPoints (x1,y1) (x2,y2) = manhattanDistance x1 y1 x2 y2
@@ -66,7 +73,41 @@ module AStar =
         G: int64
         Data: 'a
     }
-    
+
+module SparseGrid =
+
+    let tryGet (row,col) (grid:IDictionary<int*int, 'a>) =
+        match grid.TryGetValue((row,col)) with
+        | true, v -> Some v
+        | false, _ -> None
+
+    let getAdjacent (row,col) (grid:IDictionary<int*int, 'a>) = seq {
+        yield ((row - 1), col, grid |> tryGet (row - 1, col))
+        yield ((row + 1), col, grid |> tryGet ((row + 1), col))
+        yield (row, (col - 1), grid |> tryGet (row, (col - 1)))
+        yield (row, (col + 1), grid |> tryGet (row, (col + 1)))
+    }
+
+    let getAdjacentWithDiagonals (row,col) grid = seq {
+        yield! getAdjacent (row,col) grid
+        yield ((row - 1), (col + 1), grid |> tryGet ((row - 1), (col + 1)))
+        yield ((row - 1), (col - 1), grid |> tryGet ((row - 1), (col - 1)))
+        yield ((row + 1), (col - 1), grid |> tryGet ((row + 1), (col - 1)))
+        yield ((row + 1), (col + 1), grid |> tryGet ((row + 1), (col + 1)))
+    }
+
+    let minR (grid:IDictionary<int*int, 'a>) = grid.Keys |> Seq.map fst |> Seq.min
+    let maxR (grid:IDictionary<int*int, 'a>) = grid.Keys |> Seq.map fst |> Seq.max
+    let minC (grid:IDictionary<int*int, 'a>) = grid.Keys |> Seq.map snd |> Seq.min
+    let maxC (grid:IDictionary<int*int, 'a>) = grid.Keys |> Seq.map snd |> Seq.max
+
+    let printGrid dataToChar (grid:IDictionary<int*int, 'a>)=
+        for r = (minR grid) to (maxR grid) do
+            for c = (minC grid) to (maxC grid) do
+                printf "%c" (dataToChar (grid |> tryGet (r,c)))
+            printfn ""
+        grid
+
 module Array2DTools =
 
     let getAdjacent row col (grid:'a[,]) = seq {
@@ -79,16 +120,16 @@ module Array2DTools =
         if col < ((grid |> Array2D.length2) - 1) then
             yield (row, (col + 1), grid.[row, (col + 1)])
     }
-    
-    let getAdjacentWithDiagonals row col (grid:'a[,]) = seq {
-        yield! getAdjacent row col (grid:'a[,])
-        if row > 0 && col < ((grid |> Array2D.length2) - 1) then
-            yield ((row - 1), (col + 1), grid.[(row - 1), (col + 1)])
-        if row <((grid |> Array2D.length1) - 1) && col > 0 then
-            yield ((row + 1), (col - 1), grid.[(row + 1), (col - 1)])
-        if row <((grid |> Array2D.length1) - 1) && col < ((grid |> Array2D.length2) - 1) then
-            yield ((row + 1), (col + 1), grid.[(row + 1), (col + 1)])
-    }
+    // MISSING A DIAGONAL !
+    //let getAdjacentWithDiagonals row col (grid:'a[,]) = seq {
+    //    yield! getAdjacent row col (grid:'a[,])
+    //    if row > 0 && col < ((grid |> Array2D.length2) - 1) then
+    //        yield ((row - 1), (col + 1), grid.[(row - 1), (col + 1)])
+    //    if row <((grid |> Array2D.length1) - 1) && col > 0 then
+    //        yield ((row + 1), (col - 1), grid.[(row + 1), (col - 1)])
+    //    if row <((grid |> Array2D.length1) - 1) && col < ((grid |> Array2D.length2) - 1) then
+    //        yield ((row + 1), (col + 1), grid.[(row + 1), (col + 1)])
+    //}
 
     let enumArray2d (array:'a[,]) = seq {
         for i = 0 to (array |> Array2D.length1) - 1 do
