@@ -1,8 +1,8 @@
 ﻿open System.Diagnostics
 
-#load "../../Tools.fsx"
+#load "../../Tools.fs"
 
-open Tools
+open AdventOfCode
 open System.IO
 
 let bitsToNumber bits =

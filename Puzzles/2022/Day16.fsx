@@ -1,5 +1,5 @@
 #time
-#load "../../Tools.fsx"
+#load "../../Tools.fs"
 #r "nuget: FSharp.Collections.ParallelSeq"
 
 open System
@@ -7,7 +7,7 @@ open System.IO
 open System.Text.RegularExpressions
 open FSharp.Collections.ParallelSeq
 open Checked
-open Tools
+open AdventOfCode
 
 let regexValve = Regex(@"Valve (?<v>[A-Z]{2}) has flow rate=(?<rate>\d+); tunnels? leads? to valves? (?<leadsTo>.*)")
 

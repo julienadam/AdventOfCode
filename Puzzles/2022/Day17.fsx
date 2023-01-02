@@ -1,10 +1,10 @@
 #time
-#load "../../Tools.fsx"
+#load "../../Tools.fs"
 
 open System.IO
 open System.Collections.Generic
 open Checked
-open Tools
+open AdventOfCode
 
 type Jet = | Left | Right
 

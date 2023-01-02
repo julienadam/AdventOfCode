@@ -1,9 +1,9 @@
-#load "../../Tools.fsx"
+#load "../../Tools.fs"
 
 open System
 open System.IO
 open Checked // Replaces normal, unchecked arithmetic ops with checked ones. Clever !
-open Tools
+open AdventOfCode
 
 type Op =
     | Add of int64

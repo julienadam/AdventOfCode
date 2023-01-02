@@ -1,7 +1,7 @@
-#load "../../Tools.fsx"
+#load "../../Tools.fs"
 open System
 open System.IO
-open Tools
+open AdventOfCode
 
 let mapTrace line =
     line

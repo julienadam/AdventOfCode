@@ -1,10 +1,10 @@
-#load "../../Tools.fsx"
+#load "../../Tools.fs"
 #r "nuget: XPlot.Plotly" 
 
 open System
 open System.IO
 open System.Collections.Generic
-open Tools
+open AdventOfCode
 
 let mapLine (dir : string, len) = 
   let c = match dir.[0] with | 'R' -> Compass.Right | 'L' -> Compass.Left | 'U' -> Compass.Up | 'D' -> Compass.Down

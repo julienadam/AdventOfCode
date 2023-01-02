@@ -1,9 +1,9 @@
-﻿#load "../../Tools.fsx"
+﻿#load "../../Tools.fs"
 #time "on"
 
 open System
 open System.IO
-open Tools
+open AdventOfCode
 
 type Contents =
     | Nothing

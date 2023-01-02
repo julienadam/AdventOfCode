@@ -1,7 +1,7 @@
-﻿#load "../../Tools.fsx"
-open Tools
+﻿#load "../../Tools.fs"
+open AdventOfCode
 open System.IO
-open Tools.Array2DTools
+open AdventOfCode.Array2DTools
 
 type Node = {
     X: int

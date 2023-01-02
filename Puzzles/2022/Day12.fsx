@@ -1,8 +1,8 @@
 
-#load "../../Tools.fsx"
+#load "../../Tools.fs"
 
 open System.IO
-open Tools
+open AdventOfCode
 
 let getInput p = 
     let mutable start = None

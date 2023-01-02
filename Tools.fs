@@ -1,26 +1,31 @@
-﻿open System
+﻿namespace AdventOfCode
+
+open System
 open System.IO
 open System.Text.RegularExpressions
 
-let getInputPath file = Path.Combine(__SOURCE_DIRECTORY__, "Input", "2021", file)
-let getInputPath2022 file = Path.Combine(__SOURCE_DIRECTORY__, "Input", "2022", file)
+[<AutoOpen>]
+module Tools =
 
-let Dump obj =
-    printfn "%A" obj
-    obj
+    let getInputPath file = Path.Combine(__SOURCE_DIRECTORY__, "Input", "2021", file)
+    let getInputPath2022 file = Path.Combine(__SOURCE_DIRECTORY__, "Input", "2022", file)
 
-let ssplit (sep:string) (str:string) = str.Split([|sep|], StringSplitOptions.None)
+    let Dump obj =
+        printfn "%A" obj
+        obj
 
-let split2 (sep : char) (s : string) = 
-    let split = s.Split(sep)
-    split.[0], split.[1]
+    let ssplit (sep:string) (str:string) = str.Split([|sep|], StringSplitOptions.None)
 
-let splitIntList (input:string) = 
-    input.Split([|","|], StringSplitOptions.RemoveEmptyEntries) |> Array.map (fun s -> Int32.Parse s)
+    let split2 (sep : char) (s : string) = 
+        let split = s.Split(sep)
+        split.[0], split.[1]
 
-let inline tupleize2 (a:array<'a>) = a.[0], a.[1]
+    let splitIntList (input:string) = 
+        input.Split([|","|], StringSplitOptions.RemoveEmptyEntries) |> Array.map (fun s -> Int32.Parse s)
 
-let inline tupleize3 (a:array<'a>) = a.[0], a.[1], a.[2]
+    let inline tupleize2 (a:array<'a>) = a.[0], a.[1]
+
+    let inline tupleize3 (a:array<'a>) = a.[0], a.[1], a.[2]
 
 module SeqEx =
     let read n s =

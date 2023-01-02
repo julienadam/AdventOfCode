@@ -8,9 +8,9 @@ open System
 open MathNet.Numerics.LinearAlgebra
 open System.Collections.Generic
 
-#load "../../Tools.fsx"
+#load "../../Tools.fs"
 
-open Tools
+open AdventOfCode
 open System.IO
 
 type CoordinatesTransform = {

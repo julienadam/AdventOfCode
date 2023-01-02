@@ -1,11 +1,11 @@
-﻿#load "../../Tools.fsx"
+﻿#load "../../Tools.fs"
 
 open System
 open System.Diagnostics
 open System.Collections.Generic
 open System.IO
-open Tools
-open Tools.AStar
+open AdventOfCode
+open AdventOfCode.AStar
 
 type Amphipod = | Amber = 1 | Bronze = 10 | Copper = 100  | Desert = 1000
 

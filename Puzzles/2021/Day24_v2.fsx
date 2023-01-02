@@ -1,9 +1,9 @@
-﻿#load "../../Tools.fsx"
+﻿#load "../../Tools.fs"
 #time "on"
 
 open System
 open System.IO
-open Tools
+open AdventOfCode
 
 // Part 1 : 79997391969649
 // Part 2 : 16931171414113

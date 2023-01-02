@@ -1,5 +1,5 @@
 ﻿#time
-#load "../../Tools.fsx"
+#load "../../Tools.fs"
 #r "nuget: MathNet.Symbolics"
 
 open System.IO
@@ -7,7 +7,7 @@ open System.Text.RegularExpressions
 open MathNet.Symbolics
 open Operators
 open Checked
-open Tools
+open AdventOfCode
 
 let regex = new Regex (@"(?<monkey>\w+)\: (((?<m1>\w+) (?<op>[\+\-\*\/]{1}) (?<m2>\w+))|(?<num>\d+))")
 

@@ -1,10 +1,10 @@
-﻿#load "../../Tools.fsx"
+﻿#load "../../Tools.fs"
 
 open System
 open System.Collections.Generic
 open System.IO
 open System.Text.RegularExpressions
-open Tools
+open AdventOfCode
 
 let path = getInputPath "day05.txt"
 //let path = getInputPath "day05_sample1.txt"

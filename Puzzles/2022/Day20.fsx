@@ -1,10 +1,10 @@
 #time
-#load "../../Tools.fsx"
+#load "../../Tools.fs"
 
 open System
 open System.IO
 open Checked
-open Tools
+open AdventOfCode
 
 let getInput p =
     File.ReadAllLines(getInputPath2022 p)

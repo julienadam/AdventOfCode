@@ -1,9 +1,9 @@
-#load "../../Tools.fsx"
+#load "../../Tools.fs"
 open System
 open System.IO
 open System.Text.RegularExpressions
 open Checked
-open Tools
+open AdventOfCode
 
 let r = Regex(@"Sensor at x=(?<sx>-?\d+), y=(?<sy>-?\d+): closest beacon is at x=(?<bx>-?\d+), y=(?<by>-?\d+)")
 

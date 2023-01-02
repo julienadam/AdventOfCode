@@ -1,443 +1,263 @@
 ﻿open System
 open System.IO
 open System.Text.RegularExpressions
-
-let getInputPath file = Path.Combine(__SOURCE_DIRECTORY__, "Input", "2021", file)
-
-let Dump obj =
-    printfn "%A" obj
-    obj
-
-module SeqEx =
-    let read n s =
-        s |> Seq.take n, s |> Seq.skip n
-
-[<AutoOpen>]
-module TupleTools =
-    let inline swap2 (a,b) = (b,a)
-
-[<AutoOpen>]
-module Distance =
-    let manhattanDistance (x1:int) (y1:int) (x2:int) (y2:int) = Math.Abs(x1 - x2) + Math.Abs(y1 - y2)
-
-[<AutoOpen>]
-module RegexTools =
-    let inline mInt (groupName:string) (m:Match) = m.Groups.[groupName].Value |> int
-
-module AStar =
-    type AStarNode<'a> = {
-        F: int64
-        G: int64
-        Data: 'a
-    }
-    
-module Array2DTools =
-
-    let getAdjacent row col (grid:'a[,]) = seq {
-        if row > 0 then
-            yield ((row - 1), col, grid.[(row - 1), col])
-        if row < ((grid |> Array2D.length1) - 1) then
-            yield ((row + 1), col, grid.[(row + 1), col])
-        if col > 0 then
-            yield (row, (col - 1), grid.[row, (col - 1)])
-        if col < ((grid |> Array2D.length2) - 1) then
-            yield (row, (col + 1), grid.[row, (col + 1)])
-    }
-    
-    let getAdjacentWithDiagonals row col (grid:'a[,]) = seq {
-        yield! getAdjacent row col (grid:'a[,])
-        if row > 0 && col < ((grid |> Array2D.length2) - 1) then
-            yield ((row - 1), (col + 1), grid.[(row - 1), (col + 1)])
-        if row <((grid |> Array2D.length1) - 1) && col > 0 then
-            yield ((row + 1), (col - 1), grid.[(row + 1), (col - 1)])
-        if row <((grid |> Array2D.length1) - 1) && col < ((grid |> Array2D.length2) - 1) then
-            yield ((row + 1), (col + 1), grid.[(row + 1), (col + 1)])
-    }
-
-    let enumArray2d (array:'a[,]) = seq {
-        for i = 0 to (array |> Array2D.length1) - 1 do
-            for j = 0 to (array |> Array2D.length2) - 1 do
-                yield i,j, array.[i,j]
-    }
-
-    let printGrid (grid:'a[,]) =
-        for i in [0..grid.GetLength(0) - 1] do
-            for j in [0..grid.GetLength(1) - 1] do
-                printf "%O" grid.[i,j]
-                if j % 10 = 9 then
-                    printf " "
-            printfn ""
-            if i % 10 = 9 then
-                printfn ""
-        
-open System
-open System.Diagnostics
 open System.Collections.Generic
-open System.IO
-open AStar
+open MathNet.Numerics.LinearAlgebra
+open Checked
+open AdventOfCode
+open AdventOfCode.Array2DTools
 
-type Amphipod = 
-    // | Amber = 1 | Bronze = 10 | Copper = 100  | Desert = 1000
-    | Amber = 2 | Bronze = 4 | Copper = 6  | Desert = 8
+let nl = System.Environment.NewLine
 
-let Left_back = 0
-let A = 2 
-let B = 4
-let C = 6
-let D = 8
-let Right_back = 10
+type Instr =
+    | Forward
+    | TurnRight
+    | TurnLeft
 
-let readAmphipod c =
-    match c with
-    | 'A' -> Amphipod.Amber 
-    | 'B' -> Amphipod.Bronze
-    | 'C' -> Amphipod.Copper
-    | 'D' -> Amphipod.Desert
-    | _ -> failwithf "Invalid amphipod type"
+type MapCell = | Wall | Open | Void
 
-// Possible state representations :
-// mutable array starting with 4xRoomSize then Corridor
-// 2 mutable arrays for rooms and corridor
+let regex = new Regex"(\d+|R|L)"
 
-type RoomState = {
-    Position : int
-    Type : Amphipod
-    Depth: int
-    Inhabitants : Amphipod list
-    CanReceive : bool
-} with
-    member this.AddInhabitant(a:Amphipod) =
-        if a <> this.Type then
-            failwithf "Invalid amphipod for room"
-        if this.Inhabitants.Length >= 4 then
-            failwithf "Already full"
-        { this with Inhabitants = a :: this.Inhabitants }
-    member this.AddInitialInhabitant(a:Amphipod) =
-        { 
-            this with 
-                Inhabitants = a :: this.Inhabitants
-                CanReceive = this.CanReceive && a = this.Type
-        }
-    member this.AddInitialOptionalInhabitant((a:Amphipod), depth) =
-        if depth = 4 then
-            this.AddInitialInhabitant a
-        else 
-            this
-    member this.MoveOut() =
-        { 
-            this with 
-                Inhabitants = this.Inhabitants.Tail
-                CanReceive = this.Inhabitants.Tail |> Seq.forall (fun i -> i = this.Type)
-        }
-    member this.Peek() = this.Inhabitants.Head
-    member this.DistanceToMove = this.Depth - this.Inhabitants.Length
-    member this.IsDone = this.CanReceive && this.Depth = this.Inhabitants.Length
-
-let inline createRoom typ depth = { Position = typ |> int; Type = typ; Depth = depth; Inhabitants = []; CanReceive = true }
-
-//let fullRoom = 
-//    (createRoom Amphipod.Amber)
-//        .AddInitialInhabitant(Amphipod.Amber)
-//        .AddInitialInhabitant(Amphipod.Bronze)
-//        .MoveOut()
-//        .AddInhabitant(Amphipod.Amber)
-//        .AddInhabitant(Amphipod.Amber)
-//        .AddInhabitant(Amphipod.Amber)
-
-type BurrowArrayState = {
-    RoomA: RoomState
-    RoomB: RoomState
-    RoomC: RoomState
-    RoomD: RoomState
-    Corridor: Amphipod option[]
-} with 
-    member this.GetRoom roomPos =
-        match roomPos with
-        | 2 -> this.RoomA
-        | 4 -> this.RoomB
-        | 6 -> this.RoomC
-        | 8 -> this.RoomD
-        | _ -> failwithf ""
-    member this.MoveFromRoomToCorridor(roomPos, corridorPos) =
-        let newCorridors = this.Corridor |> Array.copy
-        let r = this.GetRoom roomPos
-        newCorridors.[corridorPos] <- r.Peek() |> Some
-        match roomPos with
-        | 2 -> { this with RoomA = r.MoveOut(); Corridor = newCorridors}
-        | 4 -> { this with RoomB = r.MoveOut(); Corridor = newCorridors}
-        | 6 -> { this with RoomC = r.MoveOut(); Corridor = newCorridors}
-        | 8 -> { this with RoomD = r.MoveOut(); Corridor = newCorridors}
-        | _ -> failwithf ""
-    member this.MoveFromCorridorToRoom(corridorPos, amphipod) =
-        let roomPos = amphipod |> int
-        let newCorridors = this.Corridor |> Array.copy
-        newCorridors.[corridorPos] <- None
-        let r = this.GetRoom roomPos
-        match roomPos with
-        | 2 -> { this with RoomA = r.AddInhabitant(amphipod); Corridor = newCorridors}
-        | 4 -> { this with RoomB = r.AddInhabitant(amphipod); Corridor = newCorridors}
-        | 6 -> { this with RoomC = r.AddInhabitant(amphipod); Corridor = newCorridors}
-        | 8 -> { this with RoomD = r.AddInhabitant(amphipod); Corridor = newCorridors}
-        | _ -> failwithf ""
-    member this.Rooms = [this.RoomA; this.RoomB; this.RoomC; this.RoomD;]
-
-let getInput depth fileName = 
-    let lines = getInputPath fileName |> File.ReadAllLines 
-    let filledRoomA = 
-        (createRoom Amphipod.Amber depth)
-            .AddInitialInhabitant(readAmphipod lines.[3].[3])
-            .AddInitialOptionalInhabitant(Amphipod.Desert,depth)
-            .AddInitialOptionalInhabitant(Amphipod.Desert,depth)
-            .AddInitialInhabitant(readAmphipod lines.[2].[3])
-        
-    let filledRoomB = 
-           (createRoom Amphipod.Bronze depth)
-            .AddInitialInhabitant(readAmphipod lines.[3].[5])
-            .AddInitialOptionalInhabitant(Amphipod.Bronze,depth)
-            .AddInitialOptionalInhabitant(Amphipod.Copper,depth)
-            .AddInitialInhabitant(readAmphipod lines.[2].[5])
-    let filledRoomC = 
-        (createRoom Amphipod.Copper depth)
-            .AddInitialInhabitant(readAmphipod lines.[3].[7])
-            .AddInitialOptionalInhabitant(Amphipod.Amber ,depth)
-            .AddInitialOptionalInhabitant(Amphipod.Bronze,depth)
-            .AddInitialInhabitant(readAmphipod lines.[2].[7])
-    let filledRoomD = 
-        (createRoom Amphipod.Desert depth)
-            .AddInitialInhabitant(readAmphipod lines.[3].[9])
-            .AddInitialOptionalInhabitant(Amphipod.Copper,depth)
-            .AddInitialOptionalInhabitant(Amphipod.Amber,depth)
-            .AddInitialInhabitant(readAmphipod lines.[2].[9])
-    { 
-        RoomA = filledRoomA; RoomB = filledRoomB; RoomC = filledRoomC; RoomD = filledRoomD
-        Corridor = [|None;None;None;None;None;None;None;None;None;None;None|]
-    }
-
-let printState state =
-    let getAmphipodDisplay a =
-        match a with 
-        | Some x -> 
-            match x with 
-            | Amphipod.Amber  -> 'A'
-            | Amphipod.Bronze -> 'B'
-            | Amphipod.Copper -> 'C'
-            | Amphipod.Desert -> 'D'
-            | _ -> failwithf "invalid enum"
-        | None -> '.'
-    let roomDisplay room = 
-        List.concat [
-            List.init (room.Depth - room.Inhabitants.Length) (fun _ -> '.')
-            room.Inhabitants |> List.map (Some >> getAmphipodDisplay)]
-
-    let aDisplay = roomDisplay state.RoomA
-    let bDisplay = roomDisplay state.RoomB
-    let cDisplay = roomDisplay state.RoomC
-    let dDisplay = roomDisplay state.RoomD
-    
-    printfn "#############"
-    printf "#"
-    state.Corridor |> Seq.iter (fun a -> printf "%c" (getAmphipodDisplay a))
-    printfn "#"
-    printfn "###%c#%c#%c#%c###" aDisplay.[0] bDisplay.[0] cDisplay.[0] dDisplay.[0]
-    for i = 1 to state.RoomA.Depth - 1 do
-        printfn "  #%c#%c#%c#%c#" aDisplay.[i] bDisplay.[i] cDisplay.[i] dDisplay.[i]
-    printfn "  #########"
-    
-let moveCost = function
-    | Amphipod.Amber -> 1
-    | Amphipod.Bronze -> 10
-    | Amphipod.Copper -> 100
-    | Amphipod.Desert -> 1000
-    | _ -> failwithf "Invalid amphipod type"
-    
-let findCostToEnterRoom c (amphipod:Amphipod) (state:BurrowArrayState) =
-    // Check that the room is indeed free before all else
-    let r = state.GetRoom (amphipod |> int)
-    if not r.CanReceive then
-        None
-    else
-        let mutable blocked = false
-        let mutable x = c
-        let mutable result = None
-        if c < r.Position then
-            while (not blocked && x < r.Position) do
-                x <- x + 1
-                if x % 2 = 1 && state.Corridor[x].IsSome then
-                    blocked <- true
-                if x = r.Position then
-                    result <- Some ((r.DistanceToMove + Math.Abs(c - r.Position)) * (moveCost amphipod))
-        else if c > r.Position then
-            while (not blocked && x > r.Position) do
-                x <- x - 1
-                if x % 2 = 1 && state.Corridor[x].IsSome then
-                    blocked <- true
-                if x = r.Position then
-                    result <- Some ((r.DistanceToMove + Math.Abs(c - r.Position)) * (moveCost amphipod))
-        else 
-            failwithf "Invariant failure : target at same coords as corridor spot"
-        result
-
-
-let state = 
-    (getInput 2 "Day23_sample1.txt")
-        .MoveFromRoomToCorridor(4,10)
-        .MoveFromRoomToCorridor(4,0)
-        .MoveFromRoomToCorridor(6,9)
-
-// state |> printState
-
-assert(findCostToEnterRoom 9 Amphipod.Bronze state = Some 70)
-
-
-let findFreeCorridorsRight roomPos state = seq {
-    let mutable blocked = false
-    let mutable x = roomPos
-    while (not blocked && x < Right_back) do
-        x <- x + 1
-        if x % 2 = 1 || x = Right_back then // Corridor
-            if state.Corridor[x].IsSome then
-                blocked <- true
-            else 
-                yield x
+let parseInstructions input : seq<Instr>= seq {
+    let matches = regex.Matches input
+    for m in matches do
+        match m.Value with 
+        | "R" -> yield TurnRight
+        | "L" -> yield TurnLeft
+        | s -> yield! [1..(Int32.Parse(s))] |> Seq.map (fun _ -> Forward)
 }
 
-let findFreeCorridorsLeft roomPos state = seq {
-    let mutable blocked = false
-    let mutable x = roomPos
-    while (not blocked && x > Left_back) do
-        x <- x - 1
-        if x % 2 = 1 || x = Left_back  then // Corridor
-            if state.Corridor[x].IsSome then
-                blocked <- true
-            else 
-                yield x
-}
 
-let calculateRoomToCorridorCost room corridorPos =
-    let dist = Math.Abs(corridorPos - room.Position) + 1 + room.DistanceToMove
-    let cost = (moveCost (room.Peek())) * dist
-    cost
+module Part1 =
+    let wrapOnCol (row, col) (map:MapCell[,]) r =
+        match map[r, col] with
+        | MapCell.Wall -> Some (row, col)
+        | MapCell.Open -> Some (r, col)
+        | _ -> None
 
-//state |> printState
-//calculateRoomToCorridorCost state.RoomA 7
+    let wrapNorth (row, col) (map:MapCell[,]) =
+        ([map |> maxR .. -1 .. 0] |> Seq.pick (wrapOnCol (row, col) map)), North
 
-let getNextStates (state:BurrowArrayState) = seq {
-    // Rooms that still have other amphipods have to be emptied of other amphipods
-    let roomsToHandle = state.Rooms |> Seq.filter (fun r -> not r.IsDone && not r.CanReceive) 
-    for r in roomsToHandle do
-        yield! findFreeCorridorsRight r.Position state |> Seq.map (fun x -> 
-            let cost = calculateRoomToCorridorCost r x
-            state.MoveFromRoomToCorridor(r.Position, x), cost
-        )
-        yield! findFreeCorridorsLeft r.Position state |> Seq.map (fun x -> 
-            let cost = calculateRoomToCorridorCost r x
-            state.MoveFromRoomToCorridor(r.Position, x), cost
-        )
+    let wrapSouth (row, col) (map:MapCell[,]) =
+        ([0..map |> maxR] |> Seq.pick (wrapOnCol (row, col) map)), South
 
-    // Corridor -> room
-    for i = 0 to 10 do
-        match state.Corridor.[i] with
-        | None -> ()
-        | Some a -> 
-            match findCostToEnterRoom i a state with
-            | Some cost -> 
-                yield state.MoveFromCorridorToRoom(i,a), cost
-            | None -> ()
-}
-    
-//let heuristic (burrow: BurrowState) =
-//    // Compute theorical distance if there were no other amphipods on the grid
-//    burrow.ActiveAmphipods 
-//    |> List.map (fun (amphipod, loc) ->
-//        let t = getAssignedRoom amphipod
-//        let d = absDist (room t 2) loc 
-//        assert (d >= 0) 
-//        amphipod, d
-//        )
-//    |> List.groupBy fst
-//    |> List.collect (fun (amphipodType, dists) -> 
-//        dists 
-//        |> Seq.sortBy snd
-//        |> Seq.mapi (fun i (_,d) -> computeCost ((d - i + 1) |> int64) amphipodType)
-//        |> Seq.toList
-//    )
-//    |> Seq.sum
-    
-let inline isOrganizedBurrow state =
-    state.RoomA.IsDone && state.RoomB.IsDone && state.RoomC.IsDone && state.RoomD.IsDone
+    let wrapOnRow (row, col) (map:MapCell[,]) c =
+        match map[row, c] with 
+        | MapCell.Wall -> Some (row, col)
+        | MapCell.Open -> Some (row, c)
+        | _ -> None
 
-let mutable openCount = 0
-let mutable closedCount = 0
-let mutable iterations = 0
-let rec pathfindingAStarRec (openNodes:Dictionary<BurrowArrayState, AStarNode<BurrowArrayState>>) (closedNodes:Set<BurrowArrayState>) =
-    openCount <- openNodes.Count
-    iterations <- iterations + 1
-    if iterations % 1000 = 0 then 
-        printfn "Iteration %i. Open %i Closed %i" openCount iterations closedCount
-    if openNodes.Count = 0 then
-        failwithf "No path found"
-    else
-        let bestNode = openNodes.Values |> Seq.minBy (fun n -> n.F)
-        //printfn "Selecting state %A" bestNode.Data
-        //printState bestNode.Data
-        //let sw = Stopwatch.StartNew()
-        let isFinalState = isOrganizedBurrow bestNode.Data
-        //printfn "Final state checking took %A" sw.Elapsed
-        if isFinalState then
-            printfn "Found optimal path with cost %i" bestNode.G
-            bestNode.G
-        else
-            let closed = Set.add bestNode.Data closedNodes 
-            closedCount <- closedCount + 1
-            // Todo, mark removed instead ?
-            if openNodes.Remove(bestNode.Data) |> not then
-                failwithf "Should never fail, we just took it from the list"
+    let wrapEast (row,col) (map:MapCell[,]) =
+        ([0..map |> maxC] |> Seq.pick (wrapOnRow (row,col) map)), East
 
-            //sw.Restart()
-            let adjacentNonClosed = 
-                getNextStates bestNode.Data 
-                |> Seq.filter (fun (newNode,_) -> closedNodes |> Set.contains newNode |> not)
-            //printfn "Finding next nodes took %A" sw.Elapsed
-            //printfn "Found %i possible targets" adjacentNonClosed.Length
+    let wrapWest (row,col) (map:MapCell[,]) =
+        ([map |> maxC .. -1 .. 0] |> Seq.pick (wrapOnRow (row,col) map)), West
 
-            adjacentNonClosed 
-            |> Seq.iter (fun (newNode, cost) ->
-                // Calculate total cost of new node
-                let g = bestNode.G + (cost |> int64)
+    let wrap = function | North -> wrapNorth | South -> wrapSouth | East -> wrapEast | West -> wrapWest
 
-                // Heuristic cost towards final state
-                //sw.Restart()
-                //let h = heuristic newNode
-                // Disabled heuristics
-                let h = 0L
-                //printfn "Heuristic took %A" sw.Elapsed
-                if h < 0 then
-                    failwithf "Invariant failure : heuristic is negative. %i" h
-                //printfn "Heuristic %i" h
-                
-                // If this state already exists with a lower cost, skip it
-                
-                match openNodes.TryGetValue(newNode) with 
-                | true, n when g > n.G -> ()
-                | _ -> openNodes.[newNode] <- { Data = newNode; F = h + g; G = g }
-            )
+
+    let parseMap input = 
+        let lines = input |> ssplit nl 
+        let maxRows = lines |> Array.length
+        let maxCols = lines |> Seq.map (fun l -> l.Length) |> Seq.max
+        let grid = Array2D.create maxRows maxCols MapCell.Void
+
+        for row, line in (lines |> Seq.indexed) do
+            for col, c in line |> Seq.indexed do
+                match c with
+                | '#' -> Array2D.set grid row col MapCell.Wall
+                | '.' -> Array2D.set grid row col MapCell.Open
+                | _ -> ()
+        grid
+
+    type State = {
+        row : int; col : int
+        direction : Direction
+    } with 
+        member this.Left () = { this with direction = this.direction.TurnLeft() }
+        member this.Right () = { this with direction = this.direction.TurnRight() }
+
+        member private this.updateCoordinates (origR, origC) (newR, newC) direction (map:MapCell[,]) wrapFunc =
+            match map[newR, newC] with
+            | Open -> (newR, newC), direction
+            | Void -> wrapFunc (origR,origC) map
+            | Wall -> (origR, origC), direction
+
+        member this.MoveNorth (r,c) (map:MapCell[,]) wrapFunc=
+            if r = 0 then wrapFunc (r,c) map
+            else this.updateCoordinates (r,c) (r - 1, c) North map wrapFunc
+
+        member this.MoveSouth (r,c) (map:MapCell[,]) wrapFunc =
+            if r = maxR map then wrapFunc (r,c) map
+            else this.updateCoordinates (r,c) (r + 1, c) South map wrapFunc
             
-            //let nextOpen = Seq.concat [nextOpenNodes ; remainingOpenNodes]
-            pathfindingAStarRec openNodes closed 
+        member this.MoveEast (r,c) (map:MapCell[,]) wrapFunc=
+            if c = maxC map then wrapFunc (r,c) map
+            else this.updateCoordinates (r,c) (r, c + 1) East map wrapFunc
+
+        member this.MoveWest (r,c) (map:MapCell[,]) wrapFunc =
+            if c = 0 then wrapFunc (r,c) map
+            else this.updateCoordinates (r,c) (r, c - 1) West map wrapFunc
+
+        member this.Move x moveFunc (map:MapCell[,]) wrapFunc dir = 
+            [1..x] 
+            |> Seq.fold (fun ((r,c), _) _ -> moveFunc (r,c) map wrapFunc) ((this.row, this.col), dir)
+
+        member this.Forward x (map:MapCell[,]) wrapper =
+            let ((r,c), dir) = 
+                match this.direction with
+                | North -> this.Move x this.MoveNorth map (wrapper this.direction) this.direction
+                | South -> this.Move x this.MoveSouth map (wrapper this.direction) this.direction
+                | East -> this.Move x this.MoveEast map (wrapper this.direction) this.direction
+                | West -> this.Move x this.MoveWest map (wrapper this.direction) this.direction
+            {this with row = r; col = c; direction = dir}
+
+        member this.Print (map:MapCell[,]) =
+            for r = 0 to map |> maxR do
+                for c = 0 to map |> maxC do
+                    if (r,c) = (this.row, this.col) then
+                        printf "%c" (match this.direction with | North -> '>' | South -> 'v' | East -> '>' | West -> '<')
+                    else
+                        printf "%c" (match map[r,c] with | Void -> ' ' | Wall -> '#' | Open -> '.')
+                printfn ""
+
+    let getStartingCell (input:string) = 
+        (0, input.IndexOf('.'))
+
+    let getInput p =
+        let map, instructions = 
+            File.ReadAllText(getInputPath2022 p)
+            |> ssplit (sprintf "%s%s" nl nl)
+            |> tupleize2
+        map |> parseMap, map |> getStartingCell, instructions |> parseInstructions |> Seq.toList
 
 
-//assert(Part1.pathfindingAStarRec [{ Data = Part1.getInput "Day23_sample2.txt"; G = 0; F = 0 }] Set.empty = 46L)
+    let solve ((map:MapCell[,]),(startRow, startCol),(instructions:Instr list)) wrapper=
+        let finalState =
+            instructions |> Seq.fold (fun (state:State) instr ->
+                //printfn "%A" instr
+                let nextState = 
+                    match instr with
+                    | Forward -> state.Forward 1 map wrapper
+                    | TurnLeft -> state.Left()
+                    | TurnRight -> state.Right()
+                //nextState.Print map
+                nextState
+            ) { row = startRow; col = startCol; direction = East }
+            |> Dump
 
-//let sw = Stopwatch.StartNew()
-//printfn "Starting"
-//let result = Part1.pathfindingAStarRec [{ Data = Part1.getInput "Day23.txt"; G = 0; F = 0 }] Set.empty
-//printfn "Part 1 solution : %i. Found in %A" result sw.Elapsed
+        let dirScore = match finalState.direction with | East -> 0 | South -> 1 | West -> 2 | North -> 3
+        1000 * (finalState.row + 1) + 4 * (finalState.col + 1) + dirScore
 
-//let expected = 44169
 
-let sw = Stopwatch.StartNew()
-let input = getInput 4 "Day23.txt"
-let d = new Dictionary<BurrowArrayState, AStarNode<BurrowArrayState>>()
-d.Add(input, { Data = input; G = 0; F = 0 })
-let result = pathfindingAStarRec d Set.empty
-printfn "Part 1 solution : %i. Found in %A" result sw.Elapsed
+    let solve1 input = 
+        let m = getInput input
+        solve m wrap
+
+// Part1.solve1 "Day22.txt"
+
+module Part2 =
+
+    type PointData = {
+        row: int
+        col: int
+        i: Vector<float>
+        j: Vector<float>
+        k: Vector<float>
+    } with member this.position = this.row, this.col
+
+    let parseMap2 input =
+        let lines = input |> ssplit nl
+        let grid = new Dictionary<(int*int), bool>()
+
+        for row, line in (lines |> Seq.indexed) do
+            for col, c in line |> Seq.indexed |> Seq.filter (fun (_,c) -> not (c = ' ')) do
+                let v = match c with | '#' -> false | '.' -> true | _ -> failwithf "Not a valid cell"
+                grid.[(row,col)] <- v
+        grid
+
+    let getInput p =
+        let map, instructions =
+            File.ReadAllText(getInputPath2022 p)
+            |> ssplit (sprintf "%s%s" nl nl)
+            |> tupleize2
+        map |> parseMap2, instructions |> parseInstructions |> Seq.toList
+
+    let cross (v1:Vector<float>) (v2:Vector<float>) =
+        let v1x, v1y, v1z = v1.[0], v1.[1], v1.[2]
+        let v2x, v2y, v2z = v2.[0], v2.[1], v2.[2]
+        vector [v1y * v2z - v1z * v2y; v1z * v2x - v1x * v2z; v1x * v2y - v1y * v2x]
+
+    let solve2 input =
+        let map, instrs = getInput input
+        let side = Math.Sqrt((float) (map.Count / 6)) |> int
+        let scaleIJ = side - 1
+        let scaleK = side + 1
+        let startPos = vector [float(-scaleIJ); float(-scaleIJ); float(-scaleK)]
+        let startDir = vector [2.0; 0.0; 0.0]
+        let row, col = map.Keys |> Seq.filter (fun (r,_) -> r = 0) |> Seq.minBy (fun (r,c) -> c)
+        let start = { row = row; col = col; i = vector [1.0;0.0;0.0]; j = vector [0.0;1.0;0.0] ; k = vector [0.0;0.0;1.0] }
+
+        let todo = System.Collections.Generic.Queue<PointData>([start])
+        let visited = System.Collections.Generic.HashSet<int*int>([row, col])
+        let points = System.Collections.Generic.Dictionary<Vector<float>, PointData>()
+
+        while todo.Count > 0 do
+            let p = todo.Dequeue()
+            for x = 0 to side - 1 do
+                for y = 0 to side - 1 do
+                    let key = (p.i * float(2 * x - scaleIJ)) + (p.j * float(2 * y - scaleIJ)) + (p.k * float(-scaleK))
+                    points.[key] <- { p with row = p.row + y; col = p.col + x}
+
+            let neighbors = seq {
+                yield { col = p.col + -side ; row = p.row + 0     ; i = cross p.j p.i ; j =  p.j           ; k = cross p.j p.k } // Left
+                yield { col = p.col + side  ; row = p.row + 0     ; i = cross p.i p.j ; j =  p.j           ; k = cross p.k p.j } // Right
+                yield { col = p.col + 0     ; row = p.row + -side ; i = p.i           ; j =  cross p.j p.i ; k = cross p.k p.i } // Up
+                yield { col = p.col + 0     ; row = p.row + side  ; i = p.i           ; j =  cross p.i p.j ; k = cross p.i p.k } // Down
+            }
+
+            for next in neighbors do
+                let p = next.row, next.col
+                if map.ContainsKey(p) && (visited.Contains(p) |> not) then
+                    todo.Enqueue(next)
+                    visited.Add(p) |> ignore
+
+        points |> Seq.toArray |> Dump |> ignore
+
+        let pos, dir = 
+            instrs |> Seq.fold (fun (position, direction) instr ->
+                match instr with
+                | TurnLeft -> position, (cross direction points.[position].k)
+                | TurnRight -> position, (cross points.[position].k direction)
+                | Forward -> 
+                    let next = position + direction
+                    if points.ContainsKey(next) then
+                        let pNext = points.[next]
+                        if map.[pNext.position] = true then
+                            (next, direction)
+                        else
+                            (position, direction)
+                    else
+                        let wrapDirection = points[position].k * 2.0 // This is the fun part
+                        let wrapPosition = next + wrapDirection
+                        if map[points[wrapPosition].position] then
+                            (wrapPosition, wrapDirection) 
+                        else 
+                            (position, direction)
+
+            ) (startPos, startDir)
+
+        pos |> Dump |> ignore
+        dir |> Dump |> ignore
+
+        let finalpos = points[pos]
+        printfn "Final position : %A" finalpos
+        let dirScore = Array.IndexOf([|finalpos.i * 2.0; finalpos.j * 2.0; finalpos.i * -2.0; finalpos.j * -2.0|], dir)
+        1000 * (finalpos.row + 1) + 4 * (finalpos.col + 1) + dirScore
+
+let sw = System.Diagnostics.Stopwatch.StartNew()
+let result = Part2.solve2 "Day22.txt"
+printfn "%i. took %A" result sw.Elapsed
+printfn "Press enter to quit"
+let _ = Console.ReadLine()
+

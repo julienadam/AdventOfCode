@@ -3,12 +3,12 @@
 open FSharp.Quotations.Evaluator
 open FSharp.Quotations
 
-#load "../../Tools.fsx"
+#load "../../Tools.fs"
 #time "on"
 
 open System
 open System.IO
-open Tools
+open AdventOfCode
 
 type Vars = | W = 0 | X = 1 | Y = 2 | Z = 3
 

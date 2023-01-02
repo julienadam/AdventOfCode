@@ -1,9 +1,9 @@
 ﻿open System.Diagnostics
 open System
 
-#load "../../Tools.fsx"
+#load "../../Tools.fs"
 
-open Tools
+open AdventOfCode
 open System.IO
 
 type Node = {

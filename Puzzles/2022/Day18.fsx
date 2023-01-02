@@ -1,9 +1,9 @@
 #time
-#load "../../Tools.fsx"
+#load "../../Tools.fs"
 
 open System.IO
 open Checked
-open Tools
+open AdventOfCode
 
 
 let getInput p =

@@ -1,11 +1,11 @@
-﻿#load "../../Tools.fsx"
+﻿#load "../../Tools.fs"
 
 open System
 open System.Collections.Generic
 open System.Diagnostics
 open System.IO
 open System.Text.RegularExpressions
-open Tools
+open AdventOfCode
 
 type Range = int*int
 type Cuboid = Range * Range * Range

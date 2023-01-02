@@ -21,7 +21,7 @@
     <None Include="Puzzles\2022\Day11.fsx" />
     <None Include="Puzzles\2022\Day10.fsx" />
     <None Include="Puzzles\2022\Day09.fsx" />
-    <None Include="Tools.fsx" />
+    <Compile Include="Tools.fs" />
     <Content Include="Input\2021\day01.txt" />
     <Content Include="Input\2021\day01_sample.txt" />
     <Content Include="Input\2021\day01_sample2.txt" />
@@ -192,6 +192,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="MathNet.Numerics.FSharp" Version="5.0.0" />
     <PackageReference Include="XPLot.Plotly" Version="4.0.6" />
   </ItemGroup>
 

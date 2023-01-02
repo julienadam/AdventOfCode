@@ -1,8 +1,8 @@
-#load "../../Tools.fsx"
+#load "../../Tools.fs"
 
 open System
 open System.IO
-open Tools
+open AdventOfCode
 
 type Instruction =
     | Noop

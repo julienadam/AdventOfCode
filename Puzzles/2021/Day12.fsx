@@ -1,8 +1,8 @@
-﻿#load "../../Tools.fsx"
+﻿#load "../../Tools.fs"
 
 open System
 open System.IO
-open Tools
+open AdventOfCode
 
 let path = getInputPath "day12.txt"
 //let path = getInputPath "day12_sample1.txt"

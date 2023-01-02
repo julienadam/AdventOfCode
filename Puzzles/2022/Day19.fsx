@@ -1,5 +1,5 @@
 #time
-#load "../../Tools.fsx"
+#load "../../Tools.fs"
 #r "nuget: FSharp.Collections.ParallelSeq"
 
 open System.Text.RegularExpressions
@@ -8,7 +8,7 @@ open System.Threading
 open System.Collections.Generic
 open FSharp.Collections.ParallelSeq
 open Checked
-open Tools
+open AdventOfCode
 
 type Ore = int
 type Clay = int

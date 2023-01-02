@@ -1,9 +1,9 @@
-#load "../../Tools.fsx"
+#load "../../Tools.fs"
 #r "nuget: FSharp.Data"
 open FSharp.Data
 open System
 open System.IO
-open Tools
+open AdventOfCode
 
 let parseData (l:string) = JsonValue.Parse(l)
 
