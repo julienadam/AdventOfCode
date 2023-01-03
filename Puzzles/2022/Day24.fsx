@@ -32,18 +32,18 @@ let solve1 blizzards height width =
     let exit = height - 1, width - 1
     printfn "Entrance : %A Exit : %A" entrance exit
 
-let evolve (blizzards, height, width) =
+let getBlizzPositions height width minute blizzards =
+    printfn "h: %i w:%i minute%i" height width minute
+    let w' = width - 2
+    let h' = height - 2
+
     blizzards |> List.map (fun (r, c, b) ->
         match b with
-        | North ->
-            (if r = 1 then height - 2 else r - 1), c, North
-        | South ->
-            (if r = height - 2 then 1 else r + 1), c, South
-        | East ->
-            r, (if c = width - 2 then 1 else c + 1), East
-        | West ->
-            r, (if c = 1 then width - 2 else c - 1), West
-    ), height, width
+        | North -> 1 + (h' * minute + r - 1 - minute) % h', c, North
+        | South -> (r - 1 + minute) % h' + 1, c, South
+        | East -> r, (c - 1 + minute) % w' + 1, East
+        | West -> r, 1 + (w' * minute + c - 1 - minute) % w', West
+    )
 
 let print (blizzards, height, width) =
     for r = 0 to height - 1 do
@@ -66,15 +66,20 @@ let print (blizzards, height, width) =
         printfn ""
     (blizzards, height, width)
 
-getInput "Day24_sample2.txt"
-|> print
-|> evolve
-|> print
-|> evolve
-|> print
-|> evolve
-|> print
-|> evolve
-|> print
-|> evolve
-|> print
+let printAfter (blizzards, height, width) minute =
+    let finalB = getBlizzPositions height width minute blizzards
+    print (finalB, height, width)
+    
+let input = getInput "Day24_sample2.txt"
+print input
+printAfter input 0
+printAfter input 1
+printAfter input 2
+printAfter input 3
+printAfter input 4
+printAfter input 5
+printAfter input 6
+printAfter input 7
+printAfter input 8
+printAfter input 18
+
