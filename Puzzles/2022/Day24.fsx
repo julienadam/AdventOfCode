@@ -27,13 +27,7 @@ let getInput p =
     File.ReadAllLines(getInputPath2022 p)
     |> parseMap
 
-let solve1 blizzards height width =
-    let entrance = 0, 1
-    let exit = height - 1, width - 1
-    printfn "Entrance : %A Exit : %A" entrance exit
-
 let getBlizzPositions height width minute blizzards =
-    printfn "h: %i w:%i minute%i" height width minute
     let w' = width - 2
     let h' = height - 2
 
@@ -45,41 +39,76 @@ let getBlizzPositions height width minute blizzards =
         | West -> r, 1 + (w' * minute + c - 1 - minute) % w', West
     )
 
-let print (blizzards, height, width) =
+let print (blizzards, height, width) elves =
     for r = 0 to height - 1 do
         for c = 0 to width - 1 do
-            if r = 0 || r = height - 1 then
+            if r = 0 && not(c = 1) then
                 printf "#" 
-            else if c = 0 || c = width - 1 then
+            else if (r = height - 1) && not(c = width - 2) then
+                printf "#" 
+            else if c = 0 || (c = width - 1) then
                 printf "#"
-            else 
-                match blizzards |> List.filter (fun (br,bc,dir) -> r = br && c = bc) |> List.map (fun (_,_,d) -> d) with
-                | [] -> printf "."
-                | [North] -> printf "^"
-                | [South] -> printf "v"
-                | [East] -> printf ">"
-                | [West] -> printf "<"
-                | [_;_] -> printf "2"
-                | [_;_;_] -> printf "3"
-                | [_;_;_;_] -> printf "4"
-                | _ -> failwithf "not possible ?"
+            else
+                if elves |> Set.contains (r,c) then
+                    printf "E"
+                else
+                    match blizzards |> List.filter (fun (br,bc,dir) -> r = br && c = bc) |> List.map (fun (_,_,d) -> d) with
+                    | [] -> printf "."
+                    | [North] -> printf "^"
+                    | [South] -> printf "v"
+                    | [East] -> printf ">"
+                    | [West] -> printf "<"
+                    | [_;_] -> printf "2"
+                    | [_;_;_] -> printf "3"
+                    | [_;_;_;_] -> printf "4"
+                    | _ -> failwithf "not possible ?"
         printfn ""
     (blizzards, height, width)
 
 let printAfter (blizzards, height, width) minute =
     let finalB = getBlizzPositions height width minute blizzards
     print (finalB, height, width)
-    
-let input = getInput "Day24_sample2.txt"
-print input
-printAfter input 0
-printAfter input 1
-printAfter input 2
-printAfter input 3
-printAfter input 4
-printAfter input 5
-printAfter input 6
-printAfter input 7
-printAfter input 8
-printAfter input 18
 
+ //Let's try something else
+ //At each turn put a elf everywhere possible (i.e around an existing elf and not in a blizzard)
+ //The turn we put an elf at the exit, it's a win
+
+let solve1 (blizzards, height, width) = 
+    let entrance = 0, 1
+    let exit = height - 1, width - 2
+
+    let rec multiplyElves minute (elves:Set<int*int>) =
+        let blizzPositions = blizzards |> getBlizzPositions height width minute
+        let blizzards = 
+            blizzPositions
+            |> List.map (fun (r,c,_) -> (r,c))
+            |> Set.ofList
+        let survivingElves = Set.difference elves blizzards
+
+        if survivingElves |> Set.contains exit then 
+            minute
+        else
+            let nextGeneration = 
+                survivingElves |> Seq.collect (fun (r,c) -> seq {
+                    // Northern neighbor
+                    if r > 1 || (r = 1 && c = 1) then
+                        yield ((r - 1), c)
+                    // Southern neighbor
+                    if r < height - 2 || (r = height - 2 && c = width - 2) then
+                        yield (r + 1), c
+                    // Western neighbor
+                    if c > 1 && r > 0 then
+                        yield r, c - 1
+                    // Eastern neighbor
+                    if c < width - 2 && r > 0 then
+                        yield r, c + 1
+                    // Wait here
+                    yield r,c
+                }) |> Set.ofSeq
+
+            multiplyElves (minute + 1) nextGeneration
+
+    multiplyElves 0 ([entrance] |> Set.ofList)
+
+getInput "Day24.txt"
+|> solve1
