@@ -73,9 +73,9 @@ let printAfter (blizzards, height, width) minute =
  //At each turn put a elf everywhere possible (i.e around an existing elf and not in a blizzard)
  //The turn we put an elf at the exit, it's a win
 
-let solve1 (blizzards, height, width) = 
-    let entrance = 0, 1
-    let exit = height - 1, width - 2
+let solve (blizzards, height, width) entrance exit startMin = 
+    //let entrance = 0, 1
+    //let exit = height - 1, width - 2
 
     let rec multiplyElves minute (elves:Set<int*int>) =
         let blizzPositions = blizzards |> getBlizzPositions height width minute
@@ -108,7 +108,24 @@ let solve1 (blizzards, height, width) =
 
             multiplyElves (minute + 1) nextGeneration
 
-    multiplyElves 0 ([entrance] |> Set.ofList)
+    multiplyElves startMin ([entrance] |> Set.ofList)
+
+let solve1 (blizzards, height, width) =
+    let entrance = 0, 1
+    let exit = height - 1, width - 2
+    solve (blizzards, height, width) entrance exit 0
+
+getInput "Day24_sample2.txt"
+|> solve1
+
+let solve2 (blizzards, height, width) =
+    let entrance = 0, 1
+    let exit = height - 1, width - 2
+    let trip1 = solve (blizzards, height, width) entrance exit 0
+    let trip2 = solve (blizzards, height, width) exit entrance trip1
+    let trip3 = solve (blizzards, height, width) entrance exit trip2
+    trip3
 
 getInput "Day24.txt"
-|> solve1
+|> solve2
+    
