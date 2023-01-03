@@ -97,10 +97,10 @@ let solve (blizzards, height, width) entrance exit startMin =
                     if r < height - 2 || (r = height - 2 && c = width - 2) then
                         yield (r + 1), c
                     // Western neighbor
-                    if c > 1 && r > 0 then
+                    if c > 1 && r > 0 && r < height - 1 then
                         yield r, c - 1
                     // Eastern neighbor
-                    if c < width - 2 && r > 0 then
+                    if c < width - 2 && r > 0 && r < height - 1 then
                         yield r, c + 1
                     // Wait here
                     yield r,c
@@ -115,7 +115,7 @@ let solve1 (blizzards, height, width) =
     let exit = height - 1, width - 2
     solve (blizzards, height, width) entrance exit 0
 
-getInput "Day24_sample2.txt"
+getInput "Day24.txt"
 |> solve1
 
 let solve2 (blizzards, height, width) =
