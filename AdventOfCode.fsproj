@@ -7,6 +7,7 @@
 
   <ItemGroup>
     <None Include=".gitignore" />
+    <None Include="Puzzles\2022\Day25.fsx" />
     <None Include="Puzzles\2022\Day24.fsx" />
     <None Include="Puzzles\2022\Day23.fsx" />
     <None Include="Puzzles\2022\Day22.fsx" />
@@ -93,6 +94,8 @@
     <Content Include="Input\2021\day25.txt" />
     <Content Include="Input\2021\day25_sample1.txt" />
     <Content Include="Input\2021\Day25_sample2.txt" />
+    <Content Include="Input\2022\Day25.txt" />
+    <Content Include="Input\2022\Day25_sample1.txt" />
     <Content Include="Input\2022\Day24_sample2.txt" />
     <Content Include="Input\2022\Day24_sample1.txt" />
     <Content Include="Input\2022\Day24.txt" />
