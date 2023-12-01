@@ -10,7 +10,8 @@ module Tools =
 
     let getInputPath file = Path.Combine(__SOURCE_DIRECTORY__, "Input", "2021", file)
     let getInputPath2022 file = Path.Combine(__SOURCE_DIRECTORY__, "Input", "2022", file)
-
+    let getInputPath2023 file = Path.Combine(__SOURCE_DIRECTORY__, "Input", "2023", file)
+    
     let Dump obj =
         printfn "%A" obj
         obj

@@ -94,6 +94,9 @@
     <Content Include="Input\2021\day25.txt" />
     <Content Include="Input\2021\day25_sample1.txt" />
     <Content Include="Input\2021\Day25_sample2.txt" />
+    <Content Include="input\2023\day01_sample2.txt" />
+    <Content Include="input\2023\day01_sample.txt" />
+    <Content Include="input\2023\day01.txt" />
     <Content Include="Input\2022\Day25.txt" />
     <Content Include="Input\2022\Day25_sample1.txt" />
     <Content Include="Input\2022\Day24_sample2.txt" />
@@ -173,6 +176,7 @@
     <None Include="Puzzles\2016\day7.linq" />
     <None Include="Puzzles\2016\day8.linq" />
     <None Include="Puzzles\2016\day9.linq" />
+    <Folder Include="Puzzles\2023\" />
     <None Include="Puzzles\2021\Day01.fsx" />
     <None Include="Puzzles\2021\Day02.fsx" />
     <None Include="Puzzles\2021\Day03.fsx" />
@@ -200,11 +204,16 @@
     <None Include="Puzzles\2021\Day24.fsx" />
     <None Include="Puzzles\2021\Day24_v2.fsx" />
     <None Include="Puzzles\2021\Day25.fsx" />
+    <None Include="puzzles\2023\day01.fsx" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="MathNet.Numerics.FSharp" Version="5.0.0" />
     <PackageReference Include="XPLot.Plotly" Version="4.0.6" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Input\2023\" />
   </ItemGroup>
 
 </Project>
