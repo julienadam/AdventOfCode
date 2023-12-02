@@ -34,12 +34,23 @@ let getInput p =
     File.ReadAllLines(getInputPath2023 p) 
     |> Array.mapi (fun i l -> i + 1, parse l)
 
-
 let solve1 input =
+    let isValid game = game |> Seq.forall (fun show -> show.Red <= 12 && show.Green <= 13 && show.Blue <= 14)
     getInput input
-    |> Seq.filter(fun (_, shows) ->
-        shows |> Seq.forall (fun show -> show.Red <= 12 && show.Green <= 13 && show.Blue <= 14)
-    )
+    |> Seq.filter (snd >> isValid)
     |> Seq.sumBy fst
 
+let solve2 input =
+    getInput input
+    |> Seq.map(fun (_, shows) ->
+        { 
+            Red = shows |> Seq.map (fun s -> s.Red) |> Seq.max
+            Green = shows |> Seq.map (fun s -> s.Green) |> Seq.max
+            Blue = shows |> Seq.map (fun s -> s.Blue) |> Seq.max
+        }
+    )
+    |> Seq.map (fun s -> (s.Red |> int64) * (s.Green |> int64) * (s.Blue |> int64))
+    |> Seq.sum
+
 solve1 "Day02.txt"
+solve2 "Day02.txt"
