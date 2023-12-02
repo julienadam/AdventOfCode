@@ -22,6 +22,10 @@ module Tools =
 
     let ssplit (sep:string) (str:string) = str.Split([|sep|], StringSplitOptions.None)
 
+    let ssplit2 (sep : string) (s : string) = 
+        let split = s.Split(sep)
+        split.[0], split.[1]
+
     let split2 (sep : char) (s : string) = 
         let split = s.Split(sep)
         split.[0], split.[1]
