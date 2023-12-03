@@ -129,6 +129,49 @@ module Array2DTools =
         if col < ((grid |> Array2D.length2) - 1) then
             yield (row, (col + 1), grid.[row, (col + 1)])
     }
+
+    let getAdjacentCoords row col rowLength colLength = seq {
+        if row > 0 then
+            yield ((row - 1), col)
+        if row < rowLength - 1 then
+            yield ((row + 1), col)
+        if col > 0 then
+            yield (row, (col - 1))
+        if col < colLength - 1 then
+            yield (row, (col + 1))
+    }
+
+    let getAdjacentCoordsDiagUp row col rowLength colLength = seq {
+        if row > 0 && col > 0 then
+           yield ((row - 1), (col - 1))
+        if row > 0 then
+            yield ((row - 1), col)
+        if row > 0 && col < colLength - 1 then
+           yield ((row - 1), (col + 1))
+    }
+
+    let getAdjacentCoordsDiagLeftRight row col rowLength colLength = seq {
+        if col > 0 then
+            yield (row, (col - 1))
+        if col < colLength - 1 then
+            yield (row, (col + 1))
+    }
+
+    let getAdjacentCoordsDiagDown (row:int) (col:int) (rowLength:int) (colLength:int) = seq {
+        if row < (rowLength - 1) && (col > 0) then
+            yield ((row + 1), (col - 1))
+        if row < rowLength - 1 then
+            yield ((row + 1), col)
+        if row <(rowLength - 1) && col < (colLength - 1) then
+            yield ((row + 1), (col + 1))
+    }
+    
+    let getAdjacentCoordsDiags row col rowLength colLength = seq {
+        yield! getAdjacentCoordsDiagUp row col rowLength colLength
+        yield! getAdjacentCoordsDiagLeftRight row col rowLength colLength
+        yield! getAdjacentCoordsDiagDown row col rowLength colLength
+    }
+
     // MISSING A DIAGONAL !
     //let getAdjacentWithDiagonals row col (grid:'a[,]) = seq {
     //    yield! getAdjacent row col (grid:'a[,])
