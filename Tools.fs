@@ -22,6 +22,8 @@ module Tools =
 
     let ssplit (sep:string) (str:string) = str.Split([|sep|], StringSplitOptions.None)
 
+    let ssplitNoEmpty (sep:string) (str:string) = str.Split([|sep|], StringSplitOptions.RemoveEmptyEntries)
+
     let ssplit2 (sep : string) (s : string) = 
         let split = s.Split(sep)
         split.[0], split.[1]
@@ -36,6 +38,11 @@ module Tools =
     let inline tupleize2 (a:array<'a>) = a.[0], a.[1]
 
     let inline tupleize3 (a:array<'a>) = a.[0], a.[1], a.[2]
+
+    let inline trim (str:string) = str.Trim()
+
+    let inline pow2 power = 1 <<< power
+        
 
 module SeqEx =
     let read n s =
