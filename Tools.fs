@@ -35,6 +35,13 @@ module Tools =
     let splitIntList (input:string) = 
         input.Split([|","|], StringSplitOptions.RemoveEmptyEntries) |> Array.map (fun s -> Int32.Parse s)
 
+    let splitSpaceIntList (input:string) = 
+        input.Split([|" "|], StringSplitOptions.RemoveEmptyEntries) |> Array.map (fun s -> Int32.Parse s)
+
+    let splitSpaceIntList64 (input:string) = 
+        input.Split([|" "|], StringSplitOptions.RemoveEmptyEntries) |> Array.map (fun s -> Int64.Parse s)
+
+
     let inline tupleize2 (a:array<'a>) = a.[0], a.[1]
 
     let inline tupleize3 (a:array<'a>) = a.[0], a.[1], a.[2]
@@ -43,6 +50,29 @@ module Tools =
 
     let inline pow2 power = 1 <<< power
         
+module Ranges =
+    type Range = {
+        Start: int
+        End: int
+    }
+    with
+        member this.IsInRange x = x >= this.Start && x <= this.End
+        member this.PositionInRange x = 
+            match this.IsInRange x with
+            | true -> Some (x - this.Start)
+            | false -> None
+
+    type Range64 = {
+        Start: int64
+        End: int64
+    }
+    with
+        member this.IsInRange x = x >= this.Start && x <= this.End
+        member this.PositionInRange x = 
+            match this.IsInRange x with
+            | true -> Some (x - this.Start)
+            | false -> None
+
 
 module SeqEx =
     let read n s =
