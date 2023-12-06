@@ -1,4 +1,5 @@
 ﻿#load "../../Tools.fs"
+#load "../../Tools/Array2DTools.fs"
 
 open System
 open System.IO
@@ -56,6 +57,6 @@ module Part2 =
         
         let display = Array2D.create (1 + (folded |> Seq.map snd |> Seq.max)) (1 + (folded |> Seq.map fst |> Seq.max)) ' '
         folded |> Set.iter (fun (x,y) -> Array2D.set display y x '#')
-        display |> Tools.Array2DTools.printGrid
+        display |> Array2DTools.printGrid
 
 Part2.Solve()

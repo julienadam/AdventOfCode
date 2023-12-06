@@ -1,5 +1,6 @@
 #time
 #load "../../Tools.fs"
+#load "../../Tools/RegexTools.fs"
 #r "nuget: FSharp.Collections.ParallelSeq"
 
 open System.Text.RegularExpressions

@@ -2,6 +2,8 @@
 
 open System
 open System.IO
+open System.Diagnostics
+
 open AdventOfCode
 
 let path = getInputPath "day08.txt"

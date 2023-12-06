@@ -1,4 +1,5 @@
 ﻿#load "../../Tools.fs"
+#load "../../Tools/Array2DTools.fs"
 #time "on"
 
 open System

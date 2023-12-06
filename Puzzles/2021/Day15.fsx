@@ -1,4 +1,7 @@
 ﻿#load "../../Tools.fs"
+#load "../../Tools/Array2DTools.fs"
+#load "../../Tools/Distance.fs"
+
 open AdventOfCode
 open System.IO
 open AdventOfCode.Array2DTools

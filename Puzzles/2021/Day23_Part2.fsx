@@ -1,4 +1,5 @@
 ﻿#load "../../Tools.fs"
+#load "../../Tools/AStar.fs"
 #time "on"
 
 open System

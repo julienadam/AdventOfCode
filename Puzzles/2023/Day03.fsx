@@ -1,6 +1,7 @@
 
 #time
 #load "../../Tools.fs"
+#load "../../Tools/Array2DTools.fs"
 
 open System
 open System.IO

@@ -1,6 +1,7 @@
 
 #time
 #load "../../Tools.fs"
+#load "../../Tools/Ranges.fs"
 #r "nuget: Faqt"
 
 

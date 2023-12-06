@@ -1,6 +1,7 @@
 ﻿#time
 #load "../../Tools.fs"
-
+#load "../../Tools/SparseGrid.fs"
+#load "../../Tools/Directions.fs"
 open System
 open System.IO
 open System.Collections.Generic

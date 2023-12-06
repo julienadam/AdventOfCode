@@ -1,5 +1,8 @@
 #time
 #load "../../Tools.fs"
+#load "../../Tools/RegexTools.fs"
+#load "../../Tools/AStar.fs"
+#load "../../Tools/SeqEx.fs"
 #r "nuget: FSharp.Collections.ParallelSeq"
 
 open System

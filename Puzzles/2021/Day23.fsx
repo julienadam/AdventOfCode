@@ -1,8 +1,7 @@
 ﻿#load "../../Tools.fs"
+#load "../../Tools/AStar.fs"
 
 open System
-open System.Diagnostics
-open System.Collections.Generic
 open System.IO
 open AdventOfCode
 open AdventOfCode.AStar

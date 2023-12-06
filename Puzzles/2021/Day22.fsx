@@ -1,4 +1,5 @@
 ﻿#load "../../Tools.fs"
+#load "../../Tools/RegexTools.fs"
 
 open System
 open System.Collections.Generic

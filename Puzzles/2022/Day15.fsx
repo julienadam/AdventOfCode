@@ -1,4 +1,6 @@
 #load "../../Tools.fs"
+#load "../../Tools/RegexTools.fs"
+#load "../../Tools/Distance.fs"
 open System
 open System.IO
 open System.Text.RegularExpressions

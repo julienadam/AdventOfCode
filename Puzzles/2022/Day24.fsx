@@ -1,5 +1,6 @@
 ﻿#time
 #load "../../Tools.fs"
+#load "../../Tools/Directions.fs"
 
 open System
 open System.IO
