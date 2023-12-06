@@ -108,6 +108,7 @@ module SeqEx =
       | 0, [] -> yield acc 
       | _, [] -> () }
     
+    let inline product64 (numbers : int64 seq) = numbers |> Seq.fold (fun a b -> a * b) 1L
 
 [<AutoOpen>]
 module TupleTools =
