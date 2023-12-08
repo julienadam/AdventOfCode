@@ -136,6 +136,7 @@ let solve2 = solve Part2.readCardsInHand Part2.classify
 
 solve1 "Day07_sample.txt"
 solve1 "Day07.txt"
+printfn "Part 2"
 solve2 "Day07_sample.txt"
 solve2 "Day07.txt"
 
