@@ -86,11 +86,11 @@ module Array2DTools =
         for i in [0..grid.GetLength(0) - 1] do
             for j in [0..grid.GetLength(1) - 1] do
                 printf "%c" (dataToChar grid.[i,j])
-                if j % 10 = 9 then
-                    printf " "
+                // if j % 10 = 9 then
+                //     printf " "
             printfn ""
-            if i % 10 = 9 then
-                printfn ""
+            // if i % 10 = 9 then
+            //     printfn ""
         grid
 
     let maxR grid = (grid |> Array2D.length1) - 1
