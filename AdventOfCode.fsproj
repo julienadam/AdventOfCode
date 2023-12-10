@@ -10,6 +10,7 @@
         <None Include="Puzzles\**\*.fsx" />
         <None Include="Puzzles\**\*.linq" />
         <None Include="input\**\*.txt" />
+        <Compile Include="Tools/*.fs" />
         <Compile Include="Tools.fs" />
         <Compile Include="Program.fs" />
         <None Include="initializePuzzle.fsx" />

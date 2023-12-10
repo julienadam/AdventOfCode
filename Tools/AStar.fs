@@ -33,7 +33,7 @@ module FullAStar =
             maxIterations: int option
         }
 
-    let search<'a when 'a : comparison> start goal config : seq<'a> option =
+    let searchWithGoalFunc<'a when 'a : comparison> start goal isGoal config : seq<'a> option =
 
         let rec reconstructPath cameFrom current =
             seq {
@@ -49,7 +49,7 @@ module FullAStar =
             | _ ->
                 // TODO: optimize sort using a better data structure
                 match List.sortBy (fun n -> fScores.[n]) openSet with
-                | current::_ when current = goal -> Some <| reconstructPath cameFrom current 
+                | current::_ when isGoal(current) -> Some <| reconstructPath cameFrom current 
                 | current::rest ->
                     let gScore = gScores.[current]
                     let next =
@@ -84,3 +84,5 @@ module FullAStar =
         let fScores = new Dictionary<'a, float>()
         fScores.Add(start, config.fCost start goal)
         crawler (new HashSet<'a>()) ([start], gScores, fScores, Map.empty)
+
+    let search start goal config = searchWithGoalFunc start goal (fun c -> c = goal) config
