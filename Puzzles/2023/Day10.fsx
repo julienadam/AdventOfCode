@@ -206,6 +206,8 @@ let solve2 input =
 
     let grid, startRow, startCol = getInput input
     let s = { row = startRow; col = startCol; comingFrom = None; steps = Set.empty}
+    
+    // Find the pipes connected to the starting point and the direction they were found
     let options = [|
         if connectsNorth s.row s.col grid then
             yield North, { s with row = s.row-1; comingFrom = Some South }
@@ -217,26 +219,33 @@ let solve2 input =
             yield West, { s with col = s.col-1; comingFrom = Some East }
     |]
 
-    let (da, sa) = options[0];
-    let (db,sb) = options[1];
-    let startPipe = [da;db]
-
-
+    // Should be exactly two pipes connected
     if options.Length <> 2 then
         failwithf "Should not have more than 2 directions available at starting point"
+
+    // Direction of the next pipe on one side
+    let (da, sa) = options[0];
+    // Direction of the next pipe on the other side
+    let (db,sb) = options[1];
+    // Starting pipe is both directions found
+    let startPipe = [da; db]
+
+    // Find the cells in the loop, reusing the previous code
     let sideA = { sa with steps = [sa.row, sa.col] |> Set.ofSeq }
     let sideB= { sb with steps = [sb.row, sb.col] |> Set.ofSeq }
-
     let stepsA, stepsB = crawl grid sideA sideB
     let loopCells = (Set.unionMany [stepsA;stepsB;[(startRow, startCol)] |> Set.ofList])
 
-    // Override start pipe
+    // Replace the start pipe with the correct one
     Array2D.set grid startRow startCol (Some startPipe)
 
+    // Display the starting situation
     grid |> Array2DTools.printGridCustom printPipe |> ignore
 
+    // Find all cells inside the loop
     let inside = findCellsInside grid loopCells
 
+    // Display the result graphically in the console
     let colorized = 
         grid 
         |> Array2D.mapi (fun row col pipe -> 
