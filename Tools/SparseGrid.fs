@@ -23,10 +23,10 @@ module SparseGrid =
         yield ((row + 1), (col + 1), grid |> tryGet ((row + 1), (col + 1)))
     }
 
-    let minR (grid:IDictionary<int*int, 'a>) = grid.Keys |> Seq.map fst |> Seq.min
-    let maxR (grid:IDictionary<int*int, 'a>) = grid.Keys |> Seq.map fst |> Seq.max
-    let minC (grid:IDictionary<int*int, 'a>) = grid.Keys |> Seq.map snd |> Seq.min
-    let maxC (grid:IDictionary<int*int, 'a>) = grid.Keys |> Seq.map snd |> Seq.max
+    let inline minR (grid:IDictionary<'r*'c, 'a>) = grid.Keys |> Seq.map fst |> Seq.min
+    let inline maxR (grid:IDictionary<'r*'c, 'a>) = grid.Keys |> Seq.map fst |> Seq.max
+    let inline minC (grid:IDictionary<'r*'c, 'a>) = grid.Keys |> Seq.map snd |> Seq.min
+    let inline maxC (grid:IDictionary<'r*'c, 'a>) = grid.Keys |> Seq.map snd |> Seq.max
 
     let printGrid dataToChar (grid:IDictionary<int*int, 'a>)=
         for r = (minR grid) to (maxR grid) do
