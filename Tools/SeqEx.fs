@@ -16,5 +16,11 @@ module SeqEx =
           if n >= 0 then yield! combinations acc n xs 
       | 0, [] -> yield acc 
       | _, [] -> () }
-    
+
+    let rec comb n l = 
+        match n, l with
+        | 0, _ -> [[]]
+        | _, [] -> []
+        | k, (x::xs) -> List.map ((@) [x]) (comb (k-1) xs) @ comb k xs
+
     let inline product64 (numbers : int64 seq) = numbers |> Seq.fold (fun a b -> a * b) 1L

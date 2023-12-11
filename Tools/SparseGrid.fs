@@ -1,6 +1,7 @@
 namespace AdventOfCode
 
 module SparseGrid =
+    open System.Collections.Generic
 
     let tryGet (row,col) (grid:IDictionary<int*int, 'a>) =
         match grid.TryGetValue((row,col)) with

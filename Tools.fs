@@ -40,6 +40,10 @@ module Tools =
     let splitSpaceIntList64 (input:string) = 
         input.Split([|" "|], StringSplitOptions.RemoveEmptyEntries) |> Array.map (fun s -> Int64.Parse s)
 
+    let inline ltupleize2 (l:list<'a>) =
+        match l with
+        | [a;b] -> a,b
+        | _ -> failwithf "Not a list of 2 elements"
 
     let inline tupleize2 (a:array<'a>) = a.[0], a.[1]
 

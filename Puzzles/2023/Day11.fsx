@@ -1,8 +1,10 @@
 
 #time
-#load "../../Tools.fs"
 #r "nuget: NFluent"
+#load "../../Tools.fs"
 #load "../../Tools/SparseGrid.fs"
+#load "../../Tools/SeqEx.fs"
+#load "../../Tools/Distance.fs"
 
 open System.IO
 open NFluent
@@ -10,7 +12,6 @@ open AdventOfCode
 open AdventOfCode.SparseGrid
 
 type Coords = int*int
-type Offset = int*int
 type Image = Map<Coords, unit>
 
 let getInput name : Image= 
@@ -54,12 +55,15 @@ let printCell = function | Some _ -> '#' | _ -> '.'
 
 let solve1 input =
     let image: Image = getInput input
-    // image |> printGrid printCell |> ignore
-    // printfn ""
     let expanded: Image = expand image
-    expanded |> printGrid printCell |> ignore
-    expanded
+
+    SeqEx.comb 2 (expanded.Keys |> Seq.toList)
+    |> Seq.map ltupleize2
+    |> Seq.map (fun (p1, p2) -> manhattanDistPoints p1 p2)
+    |> Seq.sum
 
 Check.That("Day11_sample1.txt" |> getInput |> expand).IsEqualTo("Day11_sample1_expanded.txt" |> getInput)
+Check.That(solve1 "Day11_sample1.txt").IsEqualTo(374)
 
-solve1 "Day11_sample1.txt"
+
+solve1 "Day11.txt"
