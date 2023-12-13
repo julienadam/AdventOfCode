@@ -7,9 +7,7 @@
 open System
 open System.IO
 open AdventOfCode
-open System.Text
 open NFluent
-open System.Text.RegularExpressions
 open System.Collections.Generic
 
 type SpringState =
@@ -20,13 +18,13 @@ type SpringState =
 let charToState = function | '?' -> Unknown | '.' -> Operational | '#' -> Damaged | _ -> failwithf "Invalid state"
 
 let parseLine line =
-        let springStates, damageReport = line |> ssplit2 " "
-        springStates |> Seq.map charToState |> List.ofSeq, damageReport |> splitIntList |> Array.toList
+    let springStates, damageReport = line |> ssplit2 " "
+    springStates |> Seq.map charToState |> List.ofSeq, damageReport |> splitIntList |> Array.toList
 
 let getInput name = 
     File.ReadAllLines(getInputPath2023 name)
 
-let verifySolution (springs:SpringState list) (solution:string) sections =
+let verifyInvariants (springs:SpringState list) (solution:string) sections =
     if solution.Contains("?") then failwithf "Should not contain unknowns"
     let actualSections = 
         solution.Split(".", StringSplitOptions.RemoveEmptyEntries) 
@@ -58,7 +56,7 @@ let countCombinations (initialSprings, initialSections) =
                 | [], [] -> 
                         //let solution = acc.ToString()
                         // printfn "%s" solution
-                        //verifySolution initialSprings solution initialSections
+                        //verifyInvariants initialSprings solution initialSections
                         1L
                 | [], spring::nextSprings ->
                     match spring with
