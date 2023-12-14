@@ -1,4 +1,3 @@
-
 #time
 #load "../../Tools.fs"
 #load "../../Tools/Array2DTools.fs"
@@ -7,6 +6,7 @@ open System.IO
 open AdventOfCode
 open Array2DTools
 open System.Collections.Generic
+open System.Text
 
 let empty = '.'
 let rolling = 'O'
