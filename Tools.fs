@@ -40,6 +40,15 @@ module Tools =
     let splitSpaceIntList64 (input:string) = 
         input.Split([|" "|], StringSplitOptions.RemoveEmptyEntries) |> Array.map (fun s -> Int64.Parse s)
 
+    let splitLines input = seq {
+        use sr = new StringReader(input)
+        let mutable s = ""
+        while (s <> null) do
+            s <- sr.ReadLine()
+            if s <> null then
+                yield s
+    }
+
     let inline ltupleize2 (l:list<'a>) =
         match l with
         | [a;b] -> a,b

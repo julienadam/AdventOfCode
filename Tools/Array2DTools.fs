@@ -93,5 +93,8 @@ module Array2DTools =
             //     printfn ""
         grid
 
-    let maxR grid = (grid |> Array2D.length1) - 1
-    let maxC grid = (grid |> Array2D.length2) - 1
+    let inline lenR grid = (grid |> Array2D.length1)
+    let inline lenC grid = (grid |> Array2D.length2)
+    let inline maxR grid = (lenR grid) - 1
+    let inline maxC grid = (lenC grid) - 1
+    let inline transpose grid = Array2D.init (grid |> lenC) (grid |> lenR) (fun r c -> grid[c,r])
