@@ -6,7 +6,6 @@ open System.IO
 open AdventOfCode
 open Array2DTools
 open System.Collections.Generic
-open System.Text
 
 let empty = '.'
 let rolling = 'O'
@@ -16,92 +15,46 @@ let getInput name =
     |> Array.map Seq.toArray
     |> array2D
 
-let tiltColumnNorth (grid:char array2d) col  =
-    let rec tiltColumnNorthRec freePos currPos =
-        if currPos = (grid |> lenR) then 
+let tiltColumnTowardsLim (grid:char array2d) pos isSwap startPos endPos step =
+    let rec tiltColumnTowardsStartRec freePos currPos =
+        if currPos = endPos then 
             ()
         else
-            match (grid[currPos, col], freePos) with
+            let v = if isSwap then grid[pos, currPos] else grid[currPos, pos]
+            match (v, freePos) with
             | 'O', Some f -> 
-                grid[f, col] <- rolling
-                grid[currPos, col] <- empty
-                tiltColumnNorthRec (Some(f + 1)) (currPos + 1)
+                if isSwap then
+                    grid[pos, f] <- rolling
+                    grid[pos,currPos] <- empty
+                else
+                    grid[f, pos] <- rolling
+                    grid[currPos, pos] <- empty
+                tiltColumnTowardsStartRec (Some(f + step)) (currPos + step)
             | 'O', None
-            | '#', _ -> tiltColumnNorthRec None (currPos + 1)
-            | '.', Some f -> tiltColumnNorthRec (Some f) (currPos + 1)
-            | '.', None -> tiltColumnNorthRec (Some currPos) (currPos + 1)
+            | '#', _ -> tiltColumnTowardsStartRec None (currPos + step)
+            | '.', Some f -> tiltColumnTowardsStartRec (Some f) (currPos + step)
+            | '.', None -> tiltColumnTowardsStartRec (Some currPos) (currPos + step)
             | _ -> failwithf "nope"
-    tiltColumnNorthRec None 0
+    tiltColumnTowardsStartRec None startPos
 
 let tiltNorth (grid:char array2d) =
     for i = 0 to (grid |> maxC) do
-        tiltColumnNorth grid i
+        tiltColumnTowardsLim grid i false 0 (grid |> lenC) 1
     grid
-
-let tiltColumnSouth (grid:char array2d) col  =
-    let rec tiltColumnSouthRec freePos currPos =
-        if currPos = -1 then 
-            ()
-        else
-            match (grid[currPos, col], freePos) with
-            | 'O', Some f -> 
-                grid[f, col] <- rolling
-                grid[currPos, col] <- empty
-                tiltColumnSouthRec (Some(f - 1)) (currPos - 1)
-            | 'O', None
-            | '#', _ -> tiltColumnSouthRec None (currPos - 1)
-            | '.', Some f -> tiltColumnSouthRec (Some f) (currPos - 1)
-            | '.', None -> tiltColumnSouthRec (Some currPos) (currPos - 1)
-            | _ -> failwithf "nope"
-    tiltColumnSouthRec None (grid |> maxC)
-
-let tiltSouth (grid:char array2d) =
-    for i = 0 to (grid |> maxC) do
-        tiltColumnSouth grid i
-    grid
-
-let tiltRowWest (grid:char array2d) row  =
-    let rec tiltRowWestRec freePos currPos =
-        if currPos = (grid |> lenC) then 
-            ()
-        else
-            match (grid[row, currPos], freePos) with
-            | 'O', Some f -> 
-                grid[row, f] <- rolling
-                grid[row, currPos] <- empty
-                tiltRowWestRec (Some(f + 1)) (currPos + 1)
-            | 'O', None
-            | '#', _ -> tiltRowWestRec None (currPos + 1)
-            | '.', Some f -> tiltRowWestRec (Some f) (currPos + 1)
-            | '.', None -> tiltRowWestRec (Some currPos) (currPos + 1)
-            | _ -> failwithf "nope"
-    tiltRowWestRec None 0
 
 let tiltWest (grid:char array2d) =
     for i = 0 to (grid |> maxR) do
-        tiltRowWest grid i
+        tiltColumnTowardsLim grid i true 0 (grid |> lenR) 1
     grid
 
-let tiltRowEast (grid:char array2d) row  =
-    let rec tiltRowEastRec freePos currPos =
-        if currPos = -1 then 
-            ()
-        else
-            match (grid[row, currPos], freePos) with
-            | 'O', Some f -> 
-                grid[row, f] <- rolling
-                grid[row, currPos] <- empty
-                tiltRowEastRec (Some(f - 1)) (currPos - 1)
-            | 'O', None
-            | '#', _ -> tiltRowEastRec None (currPos - 1)
-            | '.', Some f -> tiltRowEastRec (Some f) (currPos - 1)
-            | '.', None -> tiltRowEastRec (Some currPos) (currPos - 1)
-            | _ -> failwithf "nope"
-    tiltRowEastRec None (grid |> maxC)
+let tiltSouth (grid:char array2d) =
+    for i = 0 to (grid |> maxC) do
+        tiltColumnTowardsLim grid i false (grid |> maxC) -1 -1
+    grid
 
 let tiltEast (grid:char array2d) =
     for i = 0 to (grid |> maxR) do
-        tiltRowEast grid i
+        tiltColumnTowardsLim grid i true (grid |> maxC) -1 -1
     grid
 
 let calcLoad (grid:char array2d) =
