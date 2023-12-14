@@ -3,7 +3,6 @@
 #load "../../Tools.fs"
 #load "../../Tools/Array2DTools.fs"
 
-open System
 open System.IO
 open AdventOfCode
 open Array2DTools
@@ -17,6 +16,94 @@ let getInput name =
     |> Array.map Seq.toArray
     |> array2D
 
+let tiltColumnNorth (grid:char array2d) col  =
+    let rec tiltColumnNorthRec freePos currPos =
+        if currPos = (grid |> lenR) then 
+            ()
+        else
+            match (grid[currPos, col], freePos) with
+            | 'O', Some f -> 
+                grid[f, col] <- rolling
+                grid[currPos, col] <- empty
+                tiltColumnNorthRec (Some(f + 1)) (currPos + 1)
+            | 'O', None
+            | '#', _ -> tiltColumnNorthRec None (currPos + 1)
+            | '.', Some f -> tiltColumnNorthRec (Some f) (currPos + 1)
+            | '.', None -> tiltColumnNorthRec (Some currPos) (currPos + 1)
+            | _ -> failwithf "nope"
+    tiltColumnNorthRec None 0
+
+let tiltNorth (grid:char array2d) =
+    for i = 0 to (grid |> maxC) do
+        tiltColumnNorth grid i
+    grid
+
+let tiltColumnSouth (grid:char array2d) col  =
+    let rec tiltColumnSouthRec freePos currPos =
+        if currPos = -1 then 
+            ()
+        else
+            match (grid[currPos, col], freePos) with
+            | 'O', Some f -> 
+                grid[f, col] <- rolling
+                grid[currPos, col] <- empty
+                tiltColumnSouthRec (Some(f - 1)) (currPos - 1)
+            | 'O', None
+            | '#', _ -> tiltColumnSouthRec None (currPos - 1)
+            | '.', Some f -> tiltColumnSouthRec (Some f) (currPos - 1)
+            | '.', None -> tiltColumnSouthRec (Some currPos) (currPos - 1)
+            | _ -> failwithf "nope"
+    tiltColumnSouthRec None (grid |> maxC)
+
+let tiltSouth (grid:char array2d) =
+    for i = 0 to (grid |> maxC) do
+        tiltColumnSouth grid i
+    grid
+
+let tiltRowWest (grid:char array2d) row  =
+    let rec tiltRowWestRec freePos currPos =
+        if currPos = (grid |> lenC) then 
+            ()
+        else
+            match (grid[row, currPos], freePos) with
+            | 'O', Some f -> 
+                grid[row, f] <- rolling
+                grid[row, currPos] <- empty
+                tiltRowWestRec (Some(f + 1)) (currPos + 1)
+            | 'O', None
+            | '#', _ -> tiltRowWestRec None (currPos + 1)
+            | '.', Some f -> tiltRowWestRec (Some f) (currPos + 1)
+            | '.', None -> tiltRowWestRec (Some currPos) (currPos + 1)
+            | _ -> failwithf "nope"
+    tiltRowWestRec None 0
+
+let tiltWest (grid:char array2d) =
+    for i = 0 to (grid |> maxR) do
+        tiltRowWest grid i
+    grid
+
+let tiltRowEast (grid:char array2d) row  =
+    let rec tiltRowEastRec freePos currPos =
+        if currPos = -1 then 
+            ()
+        else
+            match (grid[row, currPos], freePos) with
+            | 'O', Some f -> 
+                grid[row, f] <- rolling
+                grid[row, currPos] <- empty
+                tiltRowEastRec (Some(f - 1)) (currPos - 1)
+            | 'O', None
+            | '#', _ -> tiltRowEastRec None (currPos - 1)
+            | '.', Some f -> tiltRowEastRec (Some f) (currPos - 1)
+            | '.', None -> tiltRowEastRec (Some currPos) (currPos - 1)
+            | _ -> failwithf "nope"
+    tiltRowEastRec None (grid |> maxC)
+
+let tiltEast (grid:char array2d) =
+    for i = 0 to (grid |> maxR) do
+        tiltRowEast grid i
+    grid
+
 let calcLoad (grid:char array2d) =
     grid 
     |> enumArray2d
@@ -27,55 +114,13 @@ let calcLoad (grid:char array2d) =
             0
     )
 
-let compact (line: char array) =
-    let rec compactRec freePos currPos =
-        if currPos = (line.Length) then 
-            ()
-        else
-            match (line[currPos], freePos) with
-            | 'O', Some f -> 
-                line[f] <- rolling
-                line[currPos] <- empty
-                compactRec (Some(f + 1)) (currPos + 1)
-            | 'O', None
-            | '#', _ -> compactRec None (currPos + 1)
-            | '.', Some f -> compactRec (Some f) (currPos + 1)
-            | '.', None -> compactRec (Some currPos) (currPos + 1)
-            | _ -> failwithf "nope"
-    compactRec None 0
-    line
-
-
-let tiltNorth (grid: char array2d) =
-    [|0..grid |> maxC|] 
-    |> Array.map (fun c -> grid[*, c] |> compact)
-    |> array2D 
-    |> transpose
-
 let solve1 input =
     getInput input 
     |> tiltNorth
+    |> Dump
     |> calcLoad
 
 if solve1 "Day14_sample1.txt" <> 136 then failwithf "Incorrect solution"
-
-solve1 "Day14.txt"
-
-let tiltWest (grid: char array2d) =
-    [|0..grid |> maxR|] 
-    |> Array.map (fun r -> compact grid[r, *])
-    |> array2D
-
-let tiltEast (grid: char array2d) =
-    [|0..grid |> maxR|] 
-    |> Array.map (fun r -> grid[r, *] |> Array.rev |> compact |> Array.rev)
-    |> array2D
-
-let tiltSouth (grid: char array2d) =
-    [|0..grid |> maxC|] 
-    |> Array.map (fun c -> grid[*, c] |> Array.rev |> compact |> Array.rev)
-    |> array2D 
-    |> transpose
 
 let cycle = tiltNorth >> tiltWest >> tiltSouth >> tiltEast
 
@@ -115,6 +160,7 @@ let solve2 input =
         grid <- cycle grid
     calcLoad grid
 
-solve2 "Day14_sample1.txt"
+if (solve2 "Day14_sample1.txt") <> 64 then failwithf "Invalid sample result for part 2"
 
+solve1 "Day14.txt"
 solve2 "Day14.txt"
