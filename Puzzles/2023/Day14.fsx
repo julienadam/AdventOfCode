@@ -1,6 +1,7 @@
-#time
+#time "on"
 #load "../../Tools.fs"
 #load "../../Tools/Array2DTools.fs"
+#r "nuget: FSharp.Collections.ParallelSeq"
 
 open System.IO
 open AdventOfCode
@@ -37,24 +38,26 @@ let tiltColumnTowardsLim (grid:char array2d) pos isSwap startPos endPos step =
             | _ -> failwithf "nope"
     tiltColumnTowardsStartRec None startPos
 
+open FSharp.Collections.ParallelSeq
+
 let tiltNorth (grid:char array2d) =
-    for i = 0 to (grid |> maxC) do
-        tiltColumnTowardsLim grid i false 0 (grid |> lenC) 1
+    [0..(grid |> maxC)] 
+    |> PSeq.iter (fun i -> tiltColumnTowardsLim grid i false 0 (grid |> lenC) 1)
     grid
 
 let tiltWest (grid:char array2d) =
-    for i = 0 to (grid |> maxR) do
-        tiltColumnTowardsLim grid i true 0 (grid |> lenR) 1
+    [0..(grid |> maxR)] 
+    |> PSeq.iter (fun i -> tiltColumnTowardsLim grid i true 0 (grid |> lenR) 1)
     grid
 
 let tiltSouth (grid:char array2d) =
-    for i = 0 to (grid |> maxC) do
-        tiltColumnTowardsLim grid i false (grid |> maxC) -1 -1
+    [0..(grid |> maxC)] 
+    |> PSeq.iter (fun i -> tiltColumnTowardsLim grid i false (grid |> maxC) -1 -1)
     grid
 
 let tiltEast (grid:char array2d) =
-    for i = 0 to (grid |> maxR) do
-        tiltColumnTowardsLim grid i true (grid |> maxC) -1 -1
+    [0..(grid |> maxR)] 
+    |> PSeq.iter (fun i -> tiltColumnTowardsLim grid i true (grid |> maxC) -1 -1)
     grid
 
 let calcLoad (grid:char array2d) =
@@ -101,7 +104,7 @@ let findCycleLength grid =
             cycleFound <- true
             result <- (round, i)
         | false, _ ->
-            states.Add(hash, (i, grid.Clone() :?> char array2d))
+            states.Add(hash, (i, grid |> Array2D.copy))
     result, states
 
 let solve2 input =
