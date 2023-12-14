@@ -88,7 +88,7 @@ let hashGrid grid =
 
 let findCycleLength grid =
     let mutable grid = grid
-    let states = new Dictionary<int, int>()
+    let states = new Dictionary<int, (int* int)>()
     let mutable cycleFound = false
     let mutable i = 0
     let mutable result = (0,0)
@@ -97,21 +97,19 @@ let findCycleLength grid =
         grid <- cycle grid 
         let hash = hashGrid grid
         match states.TryGetValue hash with
-        | true, round ->
+        | true, (round, _) ->
             cycleFound <- true
             result <- (round, i)
         | false, _ ->
-            states.Add(hash, i)
-    result
+            states.Add(hash, (i, calcLoad grid))
+    result, states
 
 let solve2 input =
     let mutable grid = getInput input
-    let cycleStart, cycleEnd = findCycleLength (grid.Clone() :?> char array2d)
+    let (cycleStart, cycleEnd), states = findCycleLength (grid.Clone() :?> char array2d)
     let length = (cycleEnd - cycleStart)
     let remaining = (cycleStart - 1) + (1000000000 - cycleStart + 1) % length
-    for _ = 1 to remaining do 
-        grid <- cycle grid
-    calcLoad grid
+    states.Values |> Seq.find (fun (r,x) -> r = remaining) |> snd
 
 if (solve2 "Day14_sample1.txt") <> 64 then failwithf "Invalid sample result for part 2"
 
