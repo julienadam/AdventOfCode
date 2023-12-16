@@ -2,6 +2,7 @@
 #load "../../Tools.fs"
 #load "../../Tools/Array2DTools.fs"
 #load "../../Tools/Directions.fs"
+#r "nuget: FSharp.Collections.ParallelSeq"
 
 open System
 open System.IO
@@ -51,7 +52,7 @@ let move (p:int*int) = function
     | West -> p ++ west
 
 
-let rec beam (grid:Tile array2d)  =
+let rec beam pos dir (grid:Tile array2d)  =
     let energized = new HashSet<(int*int*Direction)>()
 
     let rec beamRec (grid:Tile array2d) pos (dir:Direction)  =
@@ -82,26 +83,35 @@ let rec beam (grid:Tile array2d)  =
                 | HorizontalSplitter, _ -> 
                     beamRec grid (nr,nc) East
                     beamRec grid (nr,nc) West
-    beamRec grid (0,-1) East
-    energized
-
-let solve1 input =
-    let grid = getInput input 
-    let energized = grid |> beam
+    beamRec grid pos dir
     energized
     |> Seq.map (fun (r,c,v) -> (r,c)) 
     |> Set.ofSeq 
     |> Set.count
 
+let solve1 input =
+    let grid = getInput input 
+    grid |> beam (0,-1) East
+   
+
 solve1 "Day16_sample1.txt"
 solve1 "Day16.txt"
 
-  
-// grid |> printGrid
-//     printfn ""
-//     grid |> printGridCustom2 (fun v r c -> 
-//         let found = energized |> Seq.exists (fun (rv, cv, d) -> rv = r && cv = c)
-//         match found with
-//         | true -> '#'
-//         | false -> v.ToString() |> Seq.head
-//     ) |> ignore
+open FSharp.Collections.ParallelSeq
+
+let solve2 input =
+    let grid = getInput input 
+    let maxCoord = grid |> maxC
+    [0..maxCoord] 
+    |> PSeq.collect (fun i -> 
+        [
+            grid |> beam (i, -1) East
+            grid |> beam (i, maxCoord+1) West
+            grid |> beam (-1, i) South
+            grid |> beam (maxCoord+1, i) North
+        ]
+    )
+    |> Seq.max
+
+solve2 "Day16_sample1.txt"
+solve2 "Day16.txt"
