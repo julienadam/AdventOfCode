@@ -37,26 +37,11 @@ let getInput name =
     File.ReadAllLines(getInputPath2023 name)
     |> Array.map (Seq.map parseTile >> Seq.toArray)
     |> array2D
-
-let inline (++) (a,b) (c,d) = (a+c, b+d)
-
-let north = (-1,0)
-let south = (1,0)
-let east = (0,1)
-let west = (0,-1)
-
-let move (p:int*int) = function
-    | North -> p ++ north
-    | South -> p ++ south
-    | East -> p ++ east
-    | West -> p ++ west
-
-
 let rec beam pos dir (grid:Tile array2d)  =
     let energized = new HashSet<(int*int*Direction)>()
 
     let rec beamRec (grid:Tile array2d) pos (dir:Direction)  =
-        let (nr, nc) = move pos dir
+        let (nr, nc) = pos |> dir.Move
         if nr < 0 || nc < 0 || nr > (grid |> maxR) || nc > (grid |> maxC) then
             ()
         else
