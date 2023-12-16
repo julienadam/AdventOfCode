@@ -76,21 +76,20 @@ module Array2DTools =
         for i in [0..grid.GetLength(0) - 1] do
             for j in [0..grid.GetLength(1) - 1] do
                 printf "%O" grid.[i,j]
-                // if j % 10 = 9 then
-                //     printf " "
             printfn ""
-            // if i % 10 = 9 then
-            //     printfn ""
     
     let printGridCustom dataToChar (grid:'a[,]) =
         for i in [0..grid.GetLength(0) - 1] do
             for j in [0..grid.GetLength(1) - 1] do
                 printf "%c" (dataToChar grid.[i,j])
-                // if j % 10 = 9 then
-                //     printf " "
             printfn ""
-            // if i % 10 = 9 then
-            //     printfn ""
+        grid
+
+    let printGridCustom2 dataToChar (grid:'a[,]) =
+        for i in [0..grid.GetLength(0) - 1] do
+            for j in [0..grid.GetLength(1) - 1] do
+                printf "%c" (dataToChar grid.[i,j] i j)
+            printfn ""
         grid
 
     let inline lenR grid = (grid |> Array2D.length1)
