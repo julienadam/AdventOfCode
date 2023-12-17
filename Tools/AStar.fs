@@ -48,17 +48,17 @@ module FullAStar =
             | Some n when n = closedSet.Count -> None
             | _ ->
                 // TODO: optimize sort using a better data structure
-                match List.sortBy (fun n -> fScores.[n]) openSet with
+                match openSet |> List.sortBy (fun n -> fScores.[n]) with
                 | current::_ when isGoal(current) -> Some <| reconstructPath cameFrom current 
                 | current::rest ->
                     let gScore = gScores.[current]
                     let next =
                         config.neighbours current 
-                        |> Seq.filter (fun n -> closedSet.Contains(n) |> not)
+                        |> Seq.filter (fun n -> closedSet.Contains(n) = false)
                         |> Seq.fold (fun (openSet, gScores : IDictionary<'a, float>, fScores : IDictionary<'a, float>, cameFrom) neighbour ->
                             let tentativeGScore = gScore + config.gCost current neighbour
-                            if List.contains neighbour openSet && tentativeGScore >= gScores.[neighbour]
-                            then (openSet, gScores, fScores, cameFrom)
+                            if List.contains neighbour openSet && tentativeGScore >= gScores.[neighbour] then 
+                                (openSet, gScores, fScores, cameFrom)
                             else
                                 let newOpenSet = if List.contains neighbour openSet then openSet else neighbour::openSet
                                 if gScores.ContainsKey neighbour then
