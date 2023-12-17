@@ -66,7 +66,7 @@ let solve1 input =
 
     let filterInvalidCoords r c = r >= 0 && c >= 0 && r <= (grid |> maxR) && c <= (grid |> maxC)
 
-    let getNeighbours s = 
+    let getNeighbors s = 
             getPossibleNextCells s 
             |> Seq.filter (fun s -> filterInvalidCoords s.row s.col)
 
