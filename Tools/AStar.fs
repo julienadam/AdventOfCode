@@ -1,5 +1,7 @@
 namespace AdventOfCode
 
+open System.Collections.Generic
+
 module AStar =
     type AStarNode<'a> = {
         F: int64
@@ -8,15 +10,12 @@ module AStar =
     }
 
 module FullAStar = 
-
-    open System.Collections.Generic;
-
     type Config<'a> = 
         {
             /// <summary>
-            /// A method that, given a source, will return its neighbours.
+            /// A method that, given a source, will return its neighbors.
             /// </summary>
-            neighbours: 'a -> seq<'a>
+            neighbors: 'a -> seq<'a>
             /// <summary>
             /// Given two nodes that are next to each other, return the g cost between them.
             /// The g cost is the cost of moving from one to the other directly.
@@ -43,46 +42,56 @@ module FullAStar =
                 | Some next -> yield! reconstructPath cameFrom next
             }
 
-        let rec crawler (closedSet:HashSet<'a>) (openSet, gScores : IDictionary<'a, float>, fScores : IDictionary<'a, float>, cameFrom) =
-            match config.maxIterations with 
-            | Some n when n = closedSet.Count -> None
-            | _ ->
-                // TODO: optimize sort using a better data structure
-                match openSet |> List.sortBy (fun n -> fScores.[n]) with
-                | current::_ when isGoal(current) -> Some <| reconstructPath cameFrom current 
-                | current::rest ->
-                    let gScore = gScores.[current]
-                    let next =
-                        config.neighbours current 
-                        |> Seq.filter (fun n -> closedSet.Contains(n) = false)
-                        |> Seq.fold (fun (openSet, gScores : IDictionary<'a, float>, fScores : IDictionary<'a, float>, cameFrom) neighbour ->
-                            let tentativeGScore = gScore + config.gCost current neighbour
-                            if List.contains neighbour openSet && tentativeGScore >= gScores.[neighbour] then 
-                                (openSet, gScores, fScores, cameFrom)
-                            else
-                                let newOpenSet = if List.contains neighbour openSet then openSet else neighbour::openSet
-                                if gScores.ContainsKey neighbour then
-                                    gScores.[neighbour] = tentativeGScore |> ignore
-                                else
-                                    gScores.Add(neighbour, tentativeGScore)
-
-                                let ns =(tentativeGScore + config.fCost neighbour goal)
-                                if fScores.ContainsKey neighbour then
-                                    fScores.[neighbour] = ns |> ignore
-                                else
-                                    fScores.Add(neighbour, ns)
-
-                                let newCameFrom = Map.add neighbour current cameFrom
-                                newOpenSet, gScores, fScores, newCameFrom
-                            ) (rest, gScores, fScores, cameFrom)
-                    closedSet.Add(current) |> ignore
-                    crawler closedSet next
-                | _ -> None
+        let closedSet = new HashSet<'a>()
+        let openSet = new PriorityQueue<'a, float>()
+        openSet.Enqueue(start, 0)
 
         let gScores = new Dictionary<'a, float>()
         gScores.Add(start, 0.)
+
         let fScores = new Dictionary<'a, float>()
         fScores.Add(start, config.fCost start goal)
-        crawler (new HashSet<'a>()) ([start], gScores, fScores, Map.empty)
+
+        let rec crawler cameFrom =
+            match config.maxIterations with 
+            | Some n when n = closedSet.Count -> None
+            | _ ->
+                match openSet.TryDequeue() with
+                | false, _, _-> None
+                | true, current, _ when isGoal(current) -> Some <| reconstructPath cameFrom current 
+                | true, current, _ -> 
+                    let gScore = gScores.[current]
+                    let next =
+                        config.neighbors current 
+                        |> Seq.filter (fun n -> closedSet.Contains(n) = false)
+                        |> Seq.fold (fun cameFrom neighbor ->
+                            let tentativeGScore = gScore + config.gCost current neighbor
+                            let setHasNeighbor = openSet.UnorderedItems |> Seq.exists (fun ((a,_): struct ('a * float)) -> a = neighbor)
+                            
+                            if setHasNeighbor && tentativeGScore >= gScores.[neighbor] then 
+                                cameFrom
+                            else
+                                if gScores.ContainsKey neighbor then
+                                    gScores.[neighbor] <- tentativeGScore //|> ignore
+                                else
+                                    gScores.Add(neighbor, tentativeGScore)
+
+                                let ns =(tentativeGScore + config.fCost neighbor goal)
+
+                                if setHasNeighbor = false then 
+                                    openSet.Enqueue(neighbor, ns) 
+                                
+                                if fScores.ContainsKey neighbor then
+                                    fScores.[neighbor] <- ns //|> ignore
+                                else
+                                    fScores.Add(neighbor, ns)
+
+                                let newCameFrom = Map.add neighbor current cameFrom
+                                newCameFrom
+                            ) cameFrom
+                    closedSet.Add(current) |> ignore
+                    crawler next
+
+        crawler Map.empty
 
     let search start goal config = searchWithGoalFunc start goal (fun c -> c = goal) config

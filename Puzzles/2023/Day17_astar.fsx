@@ -16,8 +16,8 @@ let getInput name =
     |> Array.map (fun line -> line |> Seq.map (fun c -> (c - '0') |> int) |> Seq.toArray)
     |> array2D
 
-[<CustomComparison>]
-[<CustomEquality>]
+// [<CustomComparison>]
+// [<CustomEquality>]
 type State = 
     {
         row: int
@@ -25,17 +25,17 @@ type State =
         dir: Direction option
         straight: int
     }
-    override this.Equals other =
-        match other with
-        | :? State as s -> this.row = s.row && this.col = s.col
-        | _ -> false
-    override this.GetHashCode() = (this.row, this.col).GetHashCode()
-    interface IComparable with
-        member this.CompareTo(other:obj) =
-            match other with
-            | :? State as s -> 
-                ValueTuple<int,int>(this.row, this.col).CompareTo(s.row, s.col)
-            | _ -> 0
+    // override this.Equals other =
+    //     match other with
+    //     | :? State as s -> this.row = s.row && this.col = s.col
+    //     | _ -> false
+    // override this.GetHashCode() = (this.row, this.col).GetHashCode()
+    // interface IComparable with
+    //     member this.CompareTo(other:obj) =
+    //         match other with
+    //         | :? State as s -> 
+    //             ValueTuple<int,int>(this.row, this.col).CompareTo(s.row, s.col)
+    //         | _ -> 0
 
 
 let solve1 input =
@@ -77,20 +77,20 @@ let solve1 input =
 
     let filterInvalidCoords r c = r >= 0 && c >= 0 && r <= (grid |> maxR) && c <= (grid |> maxC)
 
-    let getNeighbours s = 
+    let getNeighbors s = 
             getPossibleNextCells s 
             |> Seq.filter (fun s -> filterInvalidCoords s.row s.col)
 
     let config: Config<State> = {
         fCost = (fun s1 s2 -> manhattanDistance s1.row s1.col s2.row s2.col)
         gCost = (fun s1 s2 -> grid[s2.row, s2.col])
-        neighbours = getNeighbours
+        neighbors = getNeighbors
         maxIterations = None
     }
 
     let start = { row = 0; col = 0; dir = None; straight = 0 }
     let target = { row = grid |> maxR; col = grid |> maxC; dir = None; straight = 0 }
-    match search start target config with
+    match searchWithGoalFunc start target (fun s -> s.row = (grid |> maxR) && s.col = (grid |> maxC)) config with
     | Some cells -> 
         let totalCost = 
             cells 
