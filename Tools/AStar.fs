@@ -43,8 +43,28 @@ module FullAStar =
             }
 
         let closedSet = new HashSet<'a>()
+
+        // Open set is stored in two forms
+        // A priority queue for next best selection
         let openSet = new PriorityQueue<'a, float>()
         openSet.Enqueue(start, 0)
+
+        // And a hash set for inclusion testing
+        let opens = new HashSet<'a>()
+        opens.Add(start) |> ignore
+
+        /// Dequeues from the priority queue and removes from set
+        let dequeue () =
+            match openSet.TryDequeue() with
+            | false, _, _ -> None
+            | true, x, _ -> 
+                opens.Remove(x) |> ignore
+                Some x
+
+        /// Enqueues on priority queue and adds to set
+        let enqueue x score =
+            opens.Add(x) |> ignore
+            openSet.Enqueue(x, score)
 
         let gScores = new Dictionary<'a, float>()
         gScores.Add(start, 0.)
@@ -52,42 +72,42 @@ module FullAStar =
         let fScores = new Dictionary<'a, float>()
         fScores.Add(start, config.fCost start goal)
 
+        let update key value (dict:IDictionary<'k,'v>) =
+            if dict.ContainsKey key then
+                dict.[key] <- value
+            else
+                dict.Add(key, value)
+
         let rec crawler cameFrom =
             match config.maxIterations with 
-            | Some n when n = closedSet.Count -> None
+            | Some n when n = closedSet.Count -> 
+                None
             | _ ->
-                match openSet.TryDequeue() with
-                | false, _, _-> None
-                | true, current, _ when isGoal(current) -> Some <| reconstructPath cameFrom current 
-                | true, current, _ -> 
+                match dequeue () with
+                | None -> 
+                    None
+                | Some current when isGoal(current) -> 
+                    Some <| reconstructPath cameFrom current 
+                | Some current -> 
                     let gScore = gScores.[current]
                     let next =
                         config.neighbors current 
                         |> Seq.filter (fun n -> closedSet.Contains(n) = false)
                         |> Seq.fold (fun cameFrom neighbor ->
                             let tentativeGScore = gScore + config.gCost current neighbor
-                            let setHasNeighbor = openSet.UnorderedItems |> Seq.exists (fun ((a,_): struct ('a * float)) -> a = neighbor)
-                            
-                            if setHasNeighbor && tentativeGScore >= gScores.[neighbor] then 
+                            let neighborIsOpen = opens.Contains(neighbor)
+                            if neighborIsOpen && tentativeGScore >= gScores.[neighbor] then 
                                 cameFrom
                             else
-                                if gScores.ContainsKey neighbor then
-                                    gScores.[neighbor] <- tentativeGScore //|> ignore
-                                else
-                                    gScores.Add(neighbor, tentativeGScore)
+                                let ns = tentativeGScore + (config.fCost neighbor goal)
 
-                                let ns =(tentativeGScore + config.fCost neighbor goal)
+                                if neighborIsOpen = false then 
+                                    enqueue neighbor ns
 
-                                if setHasNeighbor = false then 
-                                    openSet.Enqueue(neighbor, ns) 
-                                
-                                if fScores.ContainsKey neighbor then
-                                    fScores.[neighbor] <- ns //|> ignore
-                                else
-                                    fScores.Add(neighbor, ns)
+                                gScores |> update neighbor tentativeGScore
+                                fScores |> update neighbor ns
 
-                                let newCameFrom = Map.add neighbor current cameFrom
-                                newCameFrom
+                                Map.add neighbor current cameFrom
                             ) cameFrom
                     closedSet.Add(current) |> ignore
                     crawler next

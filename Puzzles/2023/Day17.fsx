@@ -77,7 +77,7 @@ let solve1 input =
             if s.row = (grid |> maxR) && s.col = (grid |> maxC) then
                 Some hl
             else
-                getNeighbours(s)
+                getNeighbors(s)
                 |> Seq.iter(fun n ->
                     if seen.Contains(n) = false then
                         seen.Add(n) |> ignore
@@ -142,7 +142,7 @@ let solve2 input =
 
     let filterInvalidCoords r c = r >= 0 && c >= 0 && r <= (grid |> maxR) && c <= (grid |> maxC)
 
-    let getNeighbours s = 
+    let getNeighbors s = 
             getPossibleNextCells s 
             |> Seq.filter (fun s -> filterInvalidCoords s.row s.col)
 
@@ -153,7 +153,7 @@ let solve2 input =
             if s.row = (grid |> maxR) && s.col = (grid |> maxC) && s.straight >= 4 then
                 Some hl
             else
-                getNeighbours(s)
+                getNeighbors(s)
                 |> Seq.iter(fun n ->
                     if seen.Contains(n) = false then
                         seen.Add(n) |> ignore
