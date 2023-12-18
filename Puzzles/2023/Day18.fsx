@@ -21,17 +21,16 @@ let parseLine line =
         | "R" -> East
         | _ -> failwithf "invalid dir"
     let length = split[1] |> int
-    let color = Color.FromName(split[2].Substring(2,6))
-    dir, length, color
+    dir, length
 
 let getInput name =
     File.ReadAllLines(getInputPath2023 name)
     |> Array.map parseLine
 
-let digTrench (instructions:(Direction * int * Color) seq) =
+let digTrench (instructions:(Direction * int) seq) =
     let grid = new Dictionary<(int*int), unit>()
     instructions 
-    |> Seq.fold(fun (row, col) (dir, len, _) ->
+    |> Seq.fold(fun (row, col) (dir, len) ->
         [1..len] |> Seq.fold(fun (r,c) _ -> 
             let newPos = dir.Move (r, c)
             grid.Add(newPos, ()) |> ignore
@@ -78,19 +77,11 @@ let solve1 input =
     let digSite = 
         getInput input 
         |> digTrench
-    
-    // let text = gridToText (fun x -> match x with | Some _ -> '█' | None -> '.') digSite
-    // File.WriteAllText(@"F:\temp\d18_edges.txt", text)
-
-    let digSite = 
-        digSite
         |> digInterior
-        
-    // let text = gridToText (fun x -> match x with | Some _ -> '█' | None -> '.') digSite
-    // File.WriteAllText(@"F:\temp\d18_filled.txt", text)
 
     digSite.Count
 
 Check.That(solve1 "Day18_sample1.txt").IsEqualTo(62)
 
 solve1 "Day18.txt"
+
