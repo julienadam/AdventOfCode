@@ -4,10 +4,10 @@ namespace AdventOfCode
 module Directions =
 
     let inline (++) (a,b) (c,d) = (a+c, b+d)
-    let private north = (-1,0)
-    let private south = (1,0)
-    let private east = (0,1)
-    let private west = (0,-1)
+    let north = (-1,0)
+    let south = (1,0)
+    let east = (0,1)
+    let west = (0,-1)
 
     type Direction =
     | North
