@@ -2,6 +2,7 @@ namespace AdventOfCode
 
 module SparseGrid =
     open System.Collections.Generic
+    open System.Text
 
     let tryGet (row,col) (grid:IDictionary<int*int, 'a>) =
         match grid.TryGetValue((row,col)) with
@@ -34,3 +35,12 @@ module SparseGrid =
                 printf "%c" (dataToChar (grid |> tryGet (r,c)))
             printfn ""
         grid
+    
+    let gridToText dataToChar (grid:IDictionary<int*int, 'a>)=
+        let sb = new StringBuilder()
+        for r = (minR grid) to (maxR grid) do
+            for c = (minC grid) to (maxC grid) do
+                let v:char = dataToChar (grid |> tryGet (r,c))
+                sb.Append(v) |> ignore
+            sb.AppendLine() |> ignore
+        sb.ToString()
