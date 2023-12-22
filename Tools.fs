@@ -64,5 +64,14 @@ module Tools =
 
     let inline swap2 (a,b) = (b,a)
 
+    let inline fst3 (a,b,c) = a
+    let inline snd3 (a,b,c) = b
+    let inline thd3 (a,b,c) = c
+
+    let inline fst4 (a,b,c,d) = a
+    let inline snd4 (a,b,c,d) = b
+    let inline thd4 (a,b,c,d) = c
+    let inline fth4 (a,b,c,d) = d
+
     let kvpKey (kvp:KeyValuePair<'a, _>) = kvp.Key
     let kvpValue (kvp:KeyValuePair<_,'a>) = kvp.Value
