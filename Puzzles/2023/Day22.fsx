@@ -72,7 +72,36 @@ let display (bricks:Piece list) =
 
     chart.Show()
 
-let solve1 input =
+// display bricksByAscZOrder
+let letAllPiecesFall pieces isCount stopAtFirst =
+    let heightMap = new Dictionary<int*int, int>()
+    let mutable falls = 0
+    let rec letAllPiecesFallRec (processing: Piece list) (remaining: Piece list)=
+        match processing with
+        | [] -> 
+            remaining, falls
+        | head::tail ->
+            // Find the collision points with the height map
+            let (_,_,colz), h = 
+                head.cells 
+                |> List.map (fun (x,y,z) ->(x,y,z), heightMap |> getHeightAt x y)
+                |> Seq.maxBy snd
+            let fallBy = colz-h-1
+            if stopAtFirst && fallBy > 0 then
+                [], 1
+            else
+                if isCount && fallBy > 0 then
+                    falls <- falls + 1
+                // Put the brick down
+                let restingBrick = (head.cells |> downBy fallBy)
+                // Update the heightmap
+                restingBrick |> Seq.iter(fun (x,y,z) -> heightMap[(x,y)] <- z)
+                let restingPiece = { id = head.id; cells = restingBrick; color = head.color }
+                // Rinse and repeat
+                letAllPiecesFallRec tail (restingPiece::remaining)
+    letAllPiecesFallRec pieces []
+
+let getRestingState input = 
     let rnd = new Random(12345)
     let mutable idGen = 0
 
@@ -88,47 +117,34 @@ let solve1 input =
         |> Seq.sortBy (fun p -> p.cells.Head |> thd3)
         |> Seq.toList
 
-    // display bricksByAscZOrder
-    let letAllPiecesFall pieces stopIfFall =
-        let heightMap = new Dictionary<int*int, int>()
-        let rec letAllPiecesFallRec (processing: Piece list) (remaining: Piece list)=
-            match processing with
-            | [] -> 
-                Some(remaining)
-            | head::tail ->
-                // Find the collision points with the height map
-                let (_,_,colz), h = 
-                    head.cells 
-                    |> List.map (fun (x,y,z) ->(x,y,z), heightMap |> getHeightAt x y)
-                    |> Seq.maxBy snd
-                let fallBy = colz-h-1
-                if stopIfFall && fallBy > 0 then
-                    None
-                else
-                    // Put the brick down
-                    let restingBrick = (head.cells |> downBy fallBy)
-                    // Update the heightmap
-                    restingBrick |> Seq.iter(fun (x,y,z) -> heightMap[(x,y)] <- z)
-                    let restingPiece = { id = head.id; cells = restingBrick; color = head.color }
-                    // Rinse and repeat
-                    letAllPiecesFallRec tail (restingPiece::remaining)
-        letAllPiecesFallRec pieces []
-    
     let allRestingPiecesInZOrder = 
-        letAllPiecesFall bricksByAscZOrder false 
-        |> Option.get 
+        letAllPiecesFall bricksByAscZOrder false false 
+        |> fst 
         |> List.sortBy (fun p -> p.cells.Head |> thd3)
     
+    allRestingPiecesInZOrder
     // display allRestingPiecesInZOrder
 
+let solve1 input =
+    let allRestingPiecesInZOrder = input |> getRestingState
     allRestingPiecesInZOrder 
     |> Seq.mapi(fun i p -> p.id, allRestingPiecesInZOrder |> List.removeAt i)
-    |> Seq.choose(fun (idRemoved, pieces) -> 
-        match letAllPiecesFall pieces true with
-        | None -> None
-        | Some _ -> Some idRemoved)
+    |> Seq.filter(fun (idRemoved, pieces) -> 
+        match letAllPiecesFall pieces false true with
+        | [], 1 -> false
+        | _ -> true)
     |> Seq.length
     
 Check.That(solve1 "Day22_sample1.txt").IsEqualTo(5) |> Dump
 solve1 "Day22.txt" |> Dump
 
+let solve2 input =
+    let allRestingPiecesInZOrder = input |> getRestingState
+    allRestingPiecesInZOrder 
+    |> Seq.mapi(fun i p -> p.id, allRestingPiecesInZOrder |> List.removeAt i)
+    |> Seq.sumBy(fun (_, pieces) -> 
+        letAllPiecesFall pieces true false |> snd
+    )
+
+Check.That(solve2 "Day22_sample1.txt").IsEqualTo(7) |> Dump
+solve2 "Day22.txt" |> Dump
