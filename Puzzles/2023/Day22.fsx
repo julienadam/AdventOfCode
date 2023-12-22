@@ -1,13 +1,16 @@
 #time "on"
 #load "../../Tools.fs"
 #load "../../Tools/SeqEx.fs"
+#load "../../Tools/SeqEx.fs"
 #r "nuget: XPlot.Plotly"
 #r "nuget: NFluent"
+#r "nuget: FSharp.Collections.ParallelSeq"
 
 open System
 open System.IO
 open AdventOfCode
 open System.Collections.Generic
+open FSharp.Collections.ParallelSeq
 
 type Piece = {
     id : int
@@ -72,7 +75,6 @@ let display (bricks:Piece list) =
 
     chart.Show()
 
-// display bricksByAscZOrder
 let letAllPiecesFall pieces isCount stopAtFirst =
     let heightMap = new Dictionary<int*int, int>()
     let mutable falls = 0
@@ -125,11 +127,13 @@ let getRestingState input =
     allRestingPiecesInZOrder
     // display allRestingPiecesInZOrder
 
+let getAllCombinations pieces = pieces |> Seq.mapi(fun i p -> p.id, pieces |> List.removeAt i)
+
 let solve1 input =
-    let allRestingPiecesInZOrder = input |> getRestingState
-    allRestingPiecesInZOrder 
-    |> Seq.mapi(fun i p -> p.id, allRestingPiecesInZOrder |> List.removeAt i)
-    |> Seq.filter(fun (idRemoved, pieces) -> 
+    input 
+    |> getRestingState 
+    |> getAllCombinations
+    |> PSeq.filter(fun (idRemoved, pieces) -> 
         match letAllPiecesFall pieces false true with
         | [], 1 -> false
         | _ -> true)
@@ -139,10 +143,10 @@ Check.That(solve1 "Day22_sample1.txt").IsEqualTo(5) |> Dump
 solve1 "Day22.txt" |> Dump
 
 let solve2 input =
-    let allRestingPiecesInZOrder = input |> getRestingState
-    allRestingPiecesInZOrder 
-    |> Seq.mapi(fun i p -> p.id, allRestingPiecesInZOrder |> List.removeAt i)
-    |> Seq.sumBy(fun (_, pieces) -> 
+    input 
+    |> getRestingState 
+    |> getAllCombinations
+    |> PSeq.sumBy(fun (_, pieces) -> 
         letAllPiecesFall pieces true false |> snd
     )
 
