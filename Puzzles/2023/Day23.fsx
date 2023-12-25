@@ -1,144 +1,130 @@
 #time "on"
 #load "../../Tools.fs"
 #load "../../Tools/Array2DTools.fs"
-#r "nuget: FSharp.Collections.ParallelSeq"
 #r "nuget: NFluent"
 
-open System.IO
+open NFluent
 open AdventOfCode
 open AdventOfCode.Array2DTools
-open FSharp.Collections.ParallelSeq
-open NFluent
 open System.Collections.Generic
+open System.IO
 
 let getInput name = 
     let grid = 
         File.ReadAllLines(getInputPath2023 name)
         |> Array.map (fun line -> line.ToCharArray())
         |> array2D
-    // Plug the entrance and exit to avoid bound checks
+    // Plug the entrance and exit cells so that
+    // bounds checking becomes irrelevant
     grid[0,1] <- '#'
     grid[(grid |> maxR), ((grid |> maxC) - 1)] <- '#'
     grid
 
-let getAdjacentWithSlopes (grid:char array2d) r c =
+let adjacentWithSlopes (grid:char array2d) (r, c) =
     match grid[r,c] with
-    | '>' -> [ r, c + 1 ]
-    | '<' -> [ r, c - 1 ]
-    | 'v' -> [ r + 1, c ]
     | '^' -> [ r - 1, c ]
+    | '>' -> [ r, c + 1 ]
+    | 'v' -> [ r + 1, c ]
+    | '<' -> [ r, c - 1 ]
     | '.' -> [ r - 1, c; r + 1, c; r, c - 1; r, c + 1 ]
-    | _ -> failwith "error"
-    
-let solve getAdjacent input =
-    let grid = getInput input 
+    | x -> failwithf "Not a valid cell %c at (%i,%i)" x r c
+    |> List.filter (fun (r, c) -> grid[r,c] <> '#')
+
+type Candidate = {
+    path: Set<int*int>
+    length: int
+    current: int*int
+}
+
+let findLongest grid getAdjacent getCost source dest =
+    let queue = Queue<Candidate>()
+    queue.Enqueue({ path = Set.empty; length = 0; current = source})
+    let mutable longest = 0
+
+    let rec walk () =
+        match queue.TryDequeue() with
+        | false, _ -> 
+            // No more steps
+            longest + 2 // add 2 because we removed the entrance and exit cells
+        | true, candidate when candidate.current = dest ->
+            // Destination reached, update maximum
+            longest <- max longest candidate.length
+            walk ()
+        | true, candidate when candidate.path.Contains(candidate.current) -> 
+            // We already visited this one, skip it
+            walk ()
+        | true, candidate ->
+            // Get the adjacent cells and walk
+            getAdjacent grid candidate.current
+            |> Seq.iter (fun next -> 
+                let n = { 
+                        candidate with 
+                            path = candidate.path |> Set.add candidate.current
+                            length = candidate.length + getCost candidate.current next
+                            current = next
+                        }
+                queue.Enqueue(n)
+            )
+            walk ()
+    walk ()
+
+let solve1 name =
+    let grid = getInput name
+    let start = 1,1
+    let target = (grid |> maxR) - 1, (grid |> maxC) - 1
+    findLongest grid adjacentWithSlopes (fun _ _ -> 1) start target
+
+Check.That(solve1 "Day23_sample1.txt").IsEqualTo(94)
+solve1 "Day23.txt"
+
+let solve2 name =
+    let grid = getInput name
+    let start = 1,1
     let target = (grid |> maxR) - 1, (grid |> maxC) - 1
 
-    let rec walk r c path =
-        let p = path |> Set.add (r,c)
-        // printfn "%i,%i" r c
-        if (r,c) = target then
-            p
-        else
-            let adjacent = 
-                getAdjacent grid r c
-                |> List.filter (fun (ar, ac) -> grid[ar,ac] <> '#' && p.Contains(ar,ac) = false)
+    let getAllAdjacent (grid:char array2d) r c =
+        [ r - 1, c; r + 1, c; r, c - 1; r, c + 1 ]
+        |> List.filter (fun (r, c) -> grid[r,c] <> '#')
 
-            if adjacent.IsEmpty then 
-                    Set.empty
-                else
-                    adjacent 
-                    |> List.map(fun (ar,ac) -> walk ar ac p)
-                    |> List.maxBy(fun p -> p.Count)
+    // Intersections are all cells with more than 2 adjacent cells
+    let intersections =
+        seq {
+            for r in 1 .. (grid |> maxR) - 1 do
+                for c in 1 .. (grid |> maxC) - 1 do
+                    if grid[r,c] <> '#' && List.length (getAllAdjacent grid r c) > 2 then
+                        yield  r, c
+        }
+        |> Set.ofSeq
+        |> Set.add start
+        |> Set.add target
 
-    let longestPath = walk 1 1 Set.empty
-    longestPath.Count + 1
-
-let solve1 = solve getAdjacentWithSlopes
-
-// Check.That(solve1 "Day23_sample1.txt").IsEqualTo(94)
-// solve1 "Day23.txt"
-
-let getAdjacentWithoutSlopes (grid:char array2d) r c =
-    match grid[r,c] with
-    | '>'
-    | '<'
-    | 'v'
-    | '^'
-    | '.' -> [ r - 1, c; r + 1, c; r, c - 1; r, c + 1 ]
-    | x -> failwithf "found %c at %i,%i" x r c
-
-#r "nuget: QuikGraph"
-#r "nuget: QuikGraph.GraphViz"
-
-open QuikGraph
-open QuikGraph.Algorithms
-
-let solve2 name = 
-
-    let grid = getInput name
-
-    let buildGraph grid getAdjacent = 
-        let graph = new AdjacencyGraph<(int*int), TaggedEdge<(int*int), int>>();
-        let visited = new HashSet<int*int>()
-        let toWalk = new Queue<(int*int)*(int*int)*int>()
-        let target = (grid |> maxR) - 1, (grid |> maxC) - 1
-
-        // let ensureEdge (r,c) =
-        //     if graph.ContainsVertex(r,c) = false then
-        //         graph.AddVertex(r,c) |> ignore
+    // Find the distance between a cell and its closest intersection neighbors
+    let computeDistanceToAllNeighbors source =
+        let distances = Dictionary<int * int, int>()
+        let queue = Queue<Set<int * int> * (int * int)>()
+        queue.Enqueue(Set.empty, source)
 
         let rec walk () =
-            match toWalk.TryDequeue() with
-            | true, (n, s, l) when n = target-> 
-                printfn "Found exit"
-                graph.AddVertex(s) |> ignore
-                graph.AddVertex(n) |> ignore
-                graph.AddEdge(new TaggedEdge<(int*int), int>(s, n, l + 1)) |> ignore
-                ()
-            | true, ((r,c), (sr,sc), l) -> 
-                visited.Add(r,c) |> ignore
-                let adjacent = 
-                    getAdjacent grid r c
-                    |> List.filter (fun (ar, ac) -> grid[ar,ac] <> '#')
-                match adjacent with
-                | [a;b] when visited.Contains(a) ->
-                    toWalk.Enqueue(b, (sr,sc), l + 1) |> ignore
-                | [a;b] when visited.Contains(b) ->
-                    toWalk.Enqueue(a, (sr,sc), l + 1) |> ignore
-                | [] -> 
-                    ()
-                | next ->
-                    printfn "Adding edge from (%i,%i) to (%i,%i) with length %i" sr sc r c (l+1)
-                    graph.AddVertex((sr,sc)) |> ignore
-                    graph.AddVertex((r,c)) |> ignore
-                    graph.AddEdge(new TaggedEdge<(int*int), int>((sr,sc), (r,c), l + 1)) |> ignore
-                    next 
-                    |> List.filter (fun n -> visited.Contains(n) = false)
-                    |> List.iter (fun n -> toWalk.Enqueue(n, (r,c), 1))
+            match queue.TryDequeue() with
+            | false, _ -> distances
+            | _, (path, current) when path.Contains(current) -> walk ()
+            | _, (path, current) when current <> source && intersections |> Set.contains current ->
+                distances[current] <- Set.count path
+                walk ()
+            | _, (path, (r,c)) ->
+                getAllAdjacent grid r c |> Seq.iter (fun next -> queue.Enqueue(Set.add (r,c) path, next))
+                walk ()
 
-                walk()
-            | false, _ ->
-                printfn "List is empty"
-                ()
-
-        toWalk.Enqueue((1,1), (1,1), 0)
         walk ()
 
-        graph
+    // Pre-compute all distances between all neighbors intersections
+    let distanceMap = intersections |> Seq.map (fun src -> src, computeDistanceToAllNeighbors src) |> dict
 
+    // Gets the neighbor intersections using the precomputed map
+    let getAdjacentIntersections _ (r,c) = distanceMap[r,c].Keys |> seq
 
-    let graph = buildGraph grid getAdjacentWithoutSlopes
-    let graphViz = new Graphviz.GraphvizAlgorithm<(int*int), TaggedEdge<(int*int), int>>(graph)
-    let dotGraph = graphViz.Generate()
-    File.WriteAllText(@"f:\temp\23.dot", dotGraph)
-    graph
+    // And call the path finder
+    findLongest grid getAdjacentIntersections (fun src dest -> distanceMap[src][dest]) start target
 
-solve2 "Day23_sample1.txt"
-
-    // let reduced  = graph.ComputeTransitiveClosure()
-    
-    
-    
-
-    
+Check.That(solve2 "Day23_sample1.txt").IsEqualTo(154)
+solve2 "Day23.txt"
