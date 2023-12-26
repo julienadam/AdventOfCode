@@ -1,13 +1,88 @@
 #time "on"
 #load "../../Tools.fs"
+#load "../../Tools/SeqEx.fs"
+#r "nuget: NFluent"
 
 open System
 open System.IO
 open AdventOfCode
+open NFluent
 
-let getInput name = File.ReadAllLines(getInputPath2023 name)
+let parseFloatList l = l |> ssplit ", " |> Array.map(fun f -> Double.Parse(f))
 
-let solve1 input =
-    getInput input |> Dump
+let inline parseLine line= 
+    let pos, vec = line |> ssplit2 " @ "
+    pos |> parseFloatList |> tupleize3, vec |> parseFloatList |> tupleize3
 
-solve1 "Day24_sample1.txt"
+let getInput name = 
+    File.ReadAllLines(getInputPath2023 name)
+    |> Array.map parseLine
+
+
+// Intersection of 2 lines
+// Converting the time-based equations into y=f(x) form
+// x = ox+vx*t -> t = (x-ox)/vx
+// y = oy+vy*t -> y = oy+vy*((x-ox)/vx) -> y = vy*x/vx+(oy-vy*ox/vx)
+
+let inline getPolynomials (ox,oy) (vx,vy) = (vy/vx),(oy-vy*ox/vx)
+
+let findCrossingPoint (p1,v1) (p2,v2) =
+    let (a,c) = getPolynomials p1 v1
+    let (b,d) = getPolynomials p2 v2
+    if a = b then
+        None
+    else
+        let x = (d-c)/(a-b)
+        let y = a*x+c
+        Some (x,y)
+
+let truncZ ((x,y,_),(vx,vy,_))  = ((x,y), (vx,vy))
+
+let verifySome s1 s2 ex ey =
+    let x,y = (findCrossingPoint (parseLine(s1) |> truncZ) (parseLine(s2) |> truncZ)) |> Option.get
+    Check.That(x).IsCloseTo(ex, 0.0000001) |> ignore
+    Check.That(y).IsCloseTo(ey, 0.0000001) |> ignore
+
+let verifyNone s1 s2 = Check.That((findCrossingPoint (parseLine(s1) |> truncZ) (parseLine(s2) |> truncZ))).IsEqualTo(None)
+
+verifySome "19, 13, 30 @ -2, 1, -2" "18, 19, 22 @ -1, -1, -2" 14.33333333 15.33333333
+verifySome "19, 13, 30 @ -2, 1, -2" "20, 25, 34 @ -2, -2, -4" 11.66666667 16.66666667
+verifySome "19, 13, 30 @ -2, 1, -2" "12, 31, 28 @ -1, -2, -1" 6.2 19.4
+verifySome "19, 13, 30 @ -2, 1, -2" "20, 19, 15 @ 1, -5, -3"  21.44444444 11.77777777
+verifyNone "18, 19, 22 @ -1, -1, -2" "20, 25, 34 @ -2, -2, -4"
+
+
+let inline isCrossingPointInsideBounds x y rangeMin rangeMax = 
+    x >= rangeMin && x <= rangeMax && y >= rangeMin && y <= rangeMax
+
+let inline isInTheFuture (ox,oy) (vx,vy) x y = // x = ox + vx*t -> t = (x - ox) / vx
+    (x - ox)/vx >= 0. && (y - oy)/vy >= 0.
+
+let solve1 input rangeMin rangeMax =
+    let hailstones = getInput input |> Array.map truncZ
+    SeqEx.autoProduct hailstones
+    |> Seq.filter (fun (a,b) -> a <> b)
+    |> Seq.filter (fun ((p1,v1),(p2,v2)) ->
+        match findCrossingPoint (p1,v1) (p2,v2) with
+        | None -> 
+            // printfn "Failure : No crossing point for \n%O\n%O" (p1,v1) (p2,v2)
+            false
+        | Some (x,y) ->
+            if isCrossingPointInsideBounds x y rangeMin rangeMax then
+                if (isInTheFuture p1 v1 x y) && (isInTheFuture p2 v2 x y) then
+                    // printfn "Success : Crossing point (%f,%f) OK for \n%O\n%O" x y (p1,v1) (p2,v2) 
+                    true
+                else
+                    // printfn "Failure : Crossing point (%f,%f) in the past for \n%O\n%O" x y (p1,v1) (p2,v2) 
+                    false
+            else
+                // printfn "Failure : Crossing point (%f,%f) outside bounds for \n%O\n%O" x y (p1,v1) (p2,v2) 
+                false
+            
+    )
+    |> Seq.length
+
+Check.That(solve1 "Day24_sample1.txt" 7 27).IsEqualTo(2)
+
+solve1 "Day24.txt" 200000000000000. 400000000000000.
+

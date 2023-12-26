@@ -9,6 +9,19 @@ module SeqEx =
             for el2 in l2 do
                 yield el1, el2 }
 
+    let distinctCrossProduct l1 l2 = seq {
+        for el1 in l1 do
+            for el2 in l2 do
+                if el1 <> el2 then
+                    yield el1, el2 
+        }
+
+    let autoProduct (src:'a array) = seq {
+        for i = 0 to src.Length - 1 do
+            for j = i+1 to src.Length - 1 do
+                yield src[i], src[j]
+    }
+
     let rec combinations acc size set = seq {
       match size, set with 
       | n, x::xs -> 

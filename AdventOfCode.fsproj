@@ -6,6 +6,10 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <Compile Include="Tools\Z3\Theory.fs" />
+        <Compile Include="Tools\Z3\Bool.fs" />
+        <Compile Include="Tools\Z3\Int.fs" />
+        <Compile Include="Tools\Z3\Real.fs" />
         <None Include=".gitignore" />
         <None Include="Puzzles\**\*.fsx" />
         <None Include="Puzzles\**\*.linq" />
@@ -19,6 +23,7 @@
     <ItemGroup>
         <PackageReference Include="MathNet.Numerics.FSharp" Version="5.0.0" />
         <PackageReference Include="XPLot.Plotly" Version="4.0.6" />
+        <PackageReference Include="Microsoft.Z3" Version="4.12.2" />
     </ItemGroup>
     <ItemGroup />
 </Project>

@@ -1,84 +1,89 @@
 ﻿
+open System
 open System.IO
 open AdventOfCode
-open AdventOfCode.Array2DTools
-open System.Collections.Generic
+
+let intArrayToFloatArray ints = ints |> Array.map float
 
 let getInput name = 
     File.ReadAllLines(getInputPath2023 name)
-    |> Array.map (fun line -> line.ToCharArray())
-    |> array2D
+    |> Array.map (fun line -> 
+        let pos, vec = line |> ssplit2 " @ "
+        pos |> splitIntList |> intArrayToFloatArray |> tupleize3, vec |> splitIntList |> intArrayToFloatArray |> tupleize3
+    )
 
-type AdjacentNode<'a when 'a:comparison> = {
-    id: 'a
-    weight : int
-}
+open Microsoft.Z3.Bool
+open Microsoft.Z3.Real
+open Microsoft.Z3
 
-type Graph<'a when 'a:comparison> = {
-    id: 'a
-    adj : Map<'a, AdjacentNode<'a> list>
-}
+let doesCross (rangeMin:float) (rangeMax:float) ((ox1:float,oy1:float,oz1:float),(vx1:float, vy1:float,vz1:float)) ((ox2:float,oy2:float,oz2:float),(vx2:float, vy2:float,vz2:float))=
+    let x1 = Real("x")
+    let y1 = Real("y")
+    let x2 = Real("x")
+    let y2 = Real("y")
+    let t = Real("t")
+    // let t2 = Real("t")
 
-let addEdge graph src dst weight =
-    let prev = match graph.adj |> Map.tryFind src with | None -> [] | Some s -> s
-    { 
-        graph with adj = graph.adj |> Map.add src ({ id = dst; weight = weight} :: prev)
-    }
+    let result = 
+        Z3.Solve(
+            // x1 =. ox1 + t*vx1,
+            // y1 =. oy1 + t*vy1,
+            // x2 =. ox2 + t*vx2,
+            // y2 =. oy2 + t*vy2,
+            // //t >. 0.,
+            // x1 =.x2,
+            // y1=.y2
+            //
+            y1 =. oy1 + ((x1 - ox1)/vx1)*x1,
+            y2 =. oy2 + ((x2 - ox2)/vx2)*x1
+            // x1 >=. rangeMin,
+            // x1 <=. rangeMax,
+            // y1 >=. rangeMin,
+            // y1 <=. rangeMax,
+            // x2 >=. rangeMin,
+            // x2 <=. rangeMax,
+            // y2 >=. rangeMin,
+            // y2 <=. rangeMax,
+            
+            // x2 =. ox2 + t2 * vx2,
+            // y2 =. oy2 + t2 * vy2,
+            // x1 =. x2,
+            // y1 =. y2,
+            // t1 >. 0.,
+            // t2 >. 0.
+            //.,new Bool(Gs.context().MkIsInteger(t.Expr :?> RealExpr))
+            )
+    match result with
+    | NoSolution -> false
+    | Unknown -> false
+    | Solution s -> 
+        let solution = 
+            s |> List.map (fun (symbol, func, res) -> 
+                match res with 
+                | Const x -> symbol.ToString(), (x :?> RatNum).Double
+                | _ -> failwithf "Not supported"
+            )
+            |> Map.ofList
+        //
+        //printfn "%f is inside [%f,%f]" (solution["x"] + solution["t"] * ovx1) rangeMin rangeMax
+        // printfn "%f is inside [%f,%f]" (solution["y"] + solution["t"] * ovy) rangeMin rangeMax
+        //
+        printfn "%O" solution
+        true
 
-let getNonSlopeAdjacent row col (grid:char[,]) = seq {
-    if row > 0 && grid.[(row - 1), col] <> 'v' then
-        yield ((row - 1), col, grid.[(row - 1), col])
-    if row < ((grid |> Array2D.length1) - 1) && grid.[(row + 1), col] <> '^' then
-        yield ((row + 1), col, grid.[(row + 1), col])
-    if col > 0 && grid.[row, (col - 1)] <> '>' then
-        yield (row, (col - 1), grid.[row, (col - 1)])
-    if col < ((grid |> Array2D.length2) - 1) && grid.[row, (col + 1)] <> '<' then
-        yield (row, (col + 1), grid.[row, (col + 1)])
-}
+doesCross 7 27 ((19,13,30),(-2,1,-2)) ((18,19,22),(-1,-1,-2))
+// doesCross 7 27 ((19,13,30),(-2,1,-2)) ((20,25,34),(-2,-2,-4))
+// doesCross 7 27 ((19,13,30),(-2,1,-2)) ((12,31,28),(-1,-2,-1))
+// doesCross 7 27 ((19,13,30),(-2,1,-2)) ((20,19,15),(1,-5,-3))
 
-let buildGraph grid =
-    let target = (grid |> maxR, (grid |> maxC) - 1)
-    let visited = HashSet<int*int>()
-    let mutable graph = { id = (0,1); adj = Map.empty }
-    let rec walk r c =
-        visited.Add((r,c)) |> ignore
-        if (r,c) = target then
-            ()
-        else
-            match grid[r,c] with
-            | '>' -> walk r (c+1)
-            | '<' -> walk r (c-1)
-            | '^' -> walk (r-1) c
-            | 'v' -> walk (r+1) c
-            | '.' ->
-                let adjacent = 
-                    grid 
-                    |> getNonSlopeAdjacent r c
-                    |> Seq.where (fun (ar,ac,v) -> visited.Contains(ar,ac) = false && v <> '#')
-                    |> Seq.map (fun (ar,ac, v) -> ar, ac)
-                    |> Seq.toList
-
-                if adjacent.IsEmpty then 
-                    ()
-                else
-                    adjacent 
-                    |> Seq.iter(fun (ar,ac) -> 
-                        graph <- addEdge graph (r,c) (ar,ac) 1
-                        walk ar ac)
-            | _ -> failwithf "Invalid walk"
-    walk 0 1
-
-    // grid |> printGridCustom2 (fun v r c ->
-    //     match longestPath.Contains (r,c) with
-    //     | true -> 'O'
-    //     | false -> v
-    // ) |> ignore
-    
-let solve1 name = 
-    let grid = getInput name
-    buildGraph grid
-
-solve1 "Day23_sample1.txt"
-
-    
- 
+// let solve1 rangeMin rangeMax input  =
+//     getInput input 
+//     |> Array.filter (fun (pos, vec) -> (doesCross rangeMin rangeMax (pos,vec)))
+//     |> Seq.length
+//
+//
+//
+//
+// // Check.That(solve1 7 27 "Day24_sample1.txt").IsEqualTo(2)
+//
+// // solve1 "Day24_sample1.txt"
