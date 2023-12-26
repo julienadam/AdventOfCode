@@ -34,6 +34,9 @@ module Tools =
     let splitIntList (input:string) = 
         input.Split([|","|], StringSplitOptions.RemoveEmptyEntries) |> Array.map (fun s -> Int32.Parse s)
 
+    let splitIntList64 (input:string) = 
+        input.Split([|","|], StringSplitOptions.RemoveEmptyEntries) |> Array.map (fun s -> Int64.Parse s)
+
     let splitSpaceIntList (input:string) = 
         input.Split([|" "|], StringSplitOptions.RemoveEmptyEntries) |> Array.map (fun s -> Int32.Parse s)
 

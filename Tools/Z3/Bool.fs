@@ -33,7 +33,7 @@ module internal BoolUtils =
   let inline createEquiv x y = Gs.context().MkEq(x, y) |> BoolExpr
   let inline createTrue() = Gs.context().MkTrue() |> BoolExpr
   let inline createFalse() = Gs.context().MkFalse() |> BoolExpr
-  let inline createDistinct (xs: Expr []) = Gs.context().MkDistinct xs |> BoolExpr
+  let createDistinct (xs: Expr []) = Gs.context().MkDistinct xs |> BoolExpr
   let inline createITE b expr1 expr2 = Gs.context().MkITE(b, expr1, expr2) :?> BoolExpr |> BoolExpr
     
 type Bool with    
