@@ -13,10 +13,10 @@
         <None Include=".gitignore" />
         <None Include="Puzzles\**\*.fsx" />
         <None Include="Puzzles\**\*.linq" />
-        <None Include="input\**\*.txt" />
         <Compile Include="Tools/*.fs" />
         <Compile Include="Tools.fs" />
         <Compile Include="Program.fs" />
+        <None Include="AdventOfCode.sln" />
         <None Include="initializePuzzle.fsx" />
     </ItemGroup>
 
@@ -25,5 +25,4 @@
         <PackageReference Include="XPLot.Plotly" Version="4.0.6" />
         <PackageReference Include="Microsoft.Z3" Version="4.12.2" />
     </ItemGroup>
-    <ItemGroup />
 </Project>
