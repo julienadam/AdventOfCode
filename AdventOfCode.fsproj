@@ -6,17 +6,18 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <Content Include="Input\2024\Day02_sample1.txt" />
+        <None Include=".gitignore" />
+        <None Include="AdventOfCode.sln" />
         <Compile Include="Tools\Z3\Theory.fs" />
         <Compile Include="Tools\Z3\Bool.fs" />
         <Compile Include="Tools\Z3\Int.fs" />
         <Compile Include="Tools\Z3\Real.fs" />
-        <None Include=".gitignore" />
         <None Include="Puzzles\**\*.fsx" />
         <None Include="Puzzles\**\*.linq" />
         <Compile Include="Tools/*.fs" />
         <Compile Include="Tools.fs" />
         <Compile Include="Program.fs" />
-        <None Include="AdventOfCode.sln" />
         <None Include="initializePuzzle.fsx" />
     </ItemGroup>
 
