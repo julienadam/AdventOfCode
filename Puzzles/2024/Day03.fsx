@@ -2,6 +2,7 @@ open System.Text.RegularExpressions
 
 #time "on"
 #load "../../Tools.fs"
+#load "../../Tools/RegexTools.fs"
 
 open System
 open System.IO
@@ -16,11 +17,11 @@ let solve1 input =
     let re = new Regex(reTrivial)
     re.Matches(instructions)
     |> Dump
-    |> Seq.map(fun m -> (m.Groups.["a"].Value |> int64) * (m.Groups.["b"].Value |> int64))
+    |> Seq.map(fun m -> (m |> mInt64 "a") * (m |> mInt64 "b"))
     |> Seq.sum
 
 
-// solve1 "Day03.txt"
+solve1 "Day03.txt"
 
 type Instruction =
     | Mul of int64 *int64
@@ -39,10 +40,10 @@ let solve2 input =
     let instructions = 
         re.Matches(getInput input)
         |> Seq.map(fun m -> 
-            match m.Value |> Dump with
+            match m.Value with
             | "do()" -> Do
             | "don't()" -> Dont
-            | _ -> Mul ((m.Groups.["a"].Value |> int64) , (m.Groups.["b"].Value |> int64)))
+            | _ -> Mul ((m |> mInt64 "a") , (m |> mInt64 "b")))
         |> Seq.toArray
     instructions |> Seq.fold (fun s i -> 
         match i, s.Enabled with
