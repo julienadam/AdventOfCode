@@ -6,6 +6,8 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <Content Include="Input\2024\Day03_sample2.txt" />
+        <Content Include="Input\2024\Day03_sample1.txt" />
         <Content Include="Input\2024\Day02_sample1.txt" />
         <None Include=".gitignore" />
         <None Include="AdventOfCode.sln" />
