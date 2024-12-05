@@ -6,9 +6,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Content Include="Input\2024\Day03_sample2.txt" />
-        <Content Include="Input\2024\Day03_sample1.txt" />
-        <Content Include="Input\2024\Day02_sample1.txt" />
         <None Include=".gitignore" />
         <None Include="AdventOfCode.sln" />
         <Compile Include="Tools\Z3\Theory.fs" />
@@ -18,6 +15,7 @@
         <None Include="Puzzles\**\*.fsx" />
         <None Include="Puzzles\**\*.linq" />
         <Compile Include="Tools/*.fs" />
+        <EmbeddedResource Remove="Input\**" />
         <Compile Include="Tools.fs" />
         <Compile Include="Program.fs" />
         <None Include="initializePuzzle.fsx" />

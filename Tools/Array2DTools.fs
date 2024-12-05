@@ -97,3 +97,4 @@ module Array2DTools =
     let inline maxR grid = (lenR grid) - 1
     let inline maxC grid = (lenC grid) - 1
     let inline transpose grid = Array2D.init (grid |> lenC) (grid |> lenR) (fun r c -> grid[c,r])
+    let isInBounds r c grid = r >= 0 && r <= (maxR grid) && c >= 0 && c <= (maxC grid)
