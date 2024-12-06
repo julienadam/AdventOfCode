@@ -9,9 +9,7 @@ open AdventOfCode
 open Array2DTools
 open FSharp.Collections.ParallelSeq
 
-let getInput name = 
-    File.ReadAllLines(getInputPath2024 name)
-    |> array2D
+let getInput name = File.ReadAllLines(getInputPath2024 name) |> array2D
 
 let rec patrol grid (r,c) (dir:Direction) (visited:(int*int) Set) =
     let (nr, nc) = dir.Move (r,c)
@@ -29,7 +27,6 @@ let solve1 input =
         grid 
         |> Array2DTools.enumArray2d 
         |> Seq.find (fun (_,_,v) -> v = '^')
-        |> Dump
 
     // set the current guard cell to empty, assuming the guard isn't
     // standing on a pile of discarded prototype suits
@@ -40,12 +37,7 @@ let solve1 input =
 
 solve1 "Day06.txt"
 
-let dirToInt = 
-    function
-    | North -> 1
-    | East -> 2
-    | South -> 4
-    | West -> 8
+let dirToInt = function | North -> 1 | East -> 2 | South -> 4 | West -> 8
 
 let isPatrolLoopInt (grid:int[,]) (sr,sc) =
     let allDirs = 1 ||| 2 ||| 4 ||| 8
@@ -64,13 +56,9 @@ let isPatrolLoopInt (grid:int[,]) (sr,sc) =
             if grid |> isInBounds nr nc |> not then
                 false
             else
-                let next = grid[nr,nc]
-                match next with
-                | x when x <= allDirs ->
-                    isPatrolLoopIntRec (nr,nc) dir
-                | System.Int32.MaxValue ->
-                    let nd = dir.TurnRight()
-                    isPatrolLoopIntRec (r,c) nd
+                match grid[nr,nc] with
+                | x when x <= allDirs -> isPatrolLoopIntRec (nr,nc) dir
+                | System.Int32.MaxValue -> isPatrolLoopIntRec (r,c) (dir.TurnRight())
                 | x -> failwithf "Not a valid cell %i" x
     isPatrolLoopIntRec (sr,sc) Direction.North
 
@@ -80,7 +68,6 @@ let solve2 input =
         grid 
         |> Array2DTools.enumArray2d 
         |> Seq.find (fun (_,_,v) -> v = '^')
-        |> Dump
 
     // set the current guard cell to empty, assuming the guard isn't
     // standing on a pile of discarded prototype suits
@@ -96,11 +83,11 @@ let solve2 input =
 
     // Transform the grid into an int grid, we're going to use the grid itself to store the route data
     let grid = 
-        grid |> Array2D.map (fun c -> 
-        match c with
-        | '.' -> 0
-        | '#' -> System.Int32.MaxValue
-        | x -> failwithf "Not a valid cell %c" x
+        grid |> Array2D.map (
+            function
+            | '.' -> 0
+            | '#' -> System.Int32.MaxValue
+            | x -> failwithf "Not a valid cell %c" x
         )
 
     let effectiveObstacles = 
