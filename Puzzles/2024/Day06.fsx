@@ -2,10 +2,12 @@
 #load "../../Tools.fs"
 #load "../../Tools/Array2DTools.fs"
 #load "../../Tools/Directions.fs"
+#r "nuget: FSharp.Collections.ParallelSeq"
 
 open System.IO
 open AdventOfCode
 open Array2DTools
+open FSharp.Collections.ParallelSeq
 
 let getInput name = 
     File.ReadAllLines(getInputPath2024 name)
@@ -20,7 +22,6 @@ let rec patrol grid (r,c) (dir:Direction) (visited:(int*int) Set) =
         | '.' -> patrol grid (nr,nc) dir (visited |> Set.add (nr,nc))
         | '#' -> patrol grid (r,c) (dir.TurnRight()) visited
         | x -> failwithf "Not a valid cell %c" x
-
 
 let solve1 input =
     let grid = getInput input
@@ -67,19 +68,25 @@ let solve2 input =
     // set the current guard cell to empty, assuming the guard isn't
     // standing on a pile of discarded prototype suits
     Array2D.set grid startR startC '.'
-    let effectiveObstacles = seq {
-        for r in [0..maxR grid] do
+
+    let effectiveObstacles = 
+        [0..maxR grid] |> PSeq.collect (fun r ->
             printfn "%i" r
-            for c in [0..maxC grid] do
-                if grid[r,c] = '.' then
-                    grid[r,c] <- '#'
-                    if isPatrolLoop grid (startR, startC) Direction.North Set.empty then
-                        yield (r,c)
-                    grid[r,c] <- '.'
-    }
+            let gridCopy = Array2D.copy grid
+            [0..maxC grid] |> Seq.choose (fun c ->
+                if gridCopy[r,c] = '.' then
+                    gridCopy[r,c] <- '#'
+                    if isPatrolLoop gridCopy (startR, startC) Direction.North Set.empty then
+                        gridCopy[r,c] <- '.'
+                        Some (r,c)
+                    else
+                        gridCopy[r,c] <- '.'
+                        None
+                else
+                    None
+        ))
 
     effectiveObstacles // |> Seq.toArray |> Dump
-    |> Seq.length
-
+    |> PSeq.length
 
 solve2 "Day06.txt"
