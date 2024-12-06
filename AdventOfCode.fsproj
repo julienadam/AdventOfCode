@@ -18,6 +18,7 @@
         <EmbeddedResource Remove="Input\**" />
         <Compile Include="Tools.fs" />
         <Compile Include="Program.fs" />
+        <Content Include="Input\2024\Day06_sample1.txt" />
         <None Include="initializePuzzle.fsx" />
     </ItemGroup>
 
