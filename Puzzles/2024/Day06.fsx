@@ -69,22 +69,28 @@ let solve2 input =
     // standing on a pile of discarded prototype suits
     Array2D.set grid startR startC '.'
 
+    // Let's optimize this a little, we don't need to try all possible obstacle positions
+    // Only the cells that are patroled are potentiel targets
+    let targets = 
+        patrol grid (startR, startC) Direction.North (Set.empty |> Set.add (startR, startC))
+        |> Set.remove (startR, startC)
+
+    printfn "%i possible targets, compared to %i initially" targets.Count ((maxR grid)*(maxC grid))
+
     let effectiveObstacles = 
-        [0..maxR grid] |> PSeq.collect (fun r ->
-            printfn "%i" r
+        targets |>PSeq.choose(fun (r,c) -> 
             let gridCopy = Array2D.copy grid
-            [0..maxC grid] |> Seq.choose (fun c ->
-                if gridCopy[r,c] = '.' then
-                    gridCopy[r,c] <- '#'
-                    if isPatrolLoop gridCopy (startR, startC) Direction.North Set.empty then
-                        gridCopy[r,c] <- '.'
-                        Some (r,c)
-                    else
-                        gridCopy[r,c] <- '.'
-                        None
+            if gridCopy[r,c] = '.' then
+                gridCopy[r,c] <- '#'
+                if isPatrolLoop gridCopy (startR, startC) Direction.North Set.empty then
+                    gridCopy[r,c] <- '.'
+                    Some (r,c)
                 else
+                    gridCopy[r,c] <- '.'
                     None
-        ))
+            else
+                None
+        )
 
     effectiveObstacles // |> Seq.toArray |> Dump
     |> PSeq.length
