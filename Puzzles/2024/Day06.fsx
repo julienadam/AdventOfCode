@@ -40,22 +40,39 @@ let solve1 input =
 
 solve1 "Day06.txt"
 
-let rec isPatrolLoop grid (r,c) (dir:Direction) (visited:(int*int*Direction) Set) =
-    if visited |> Set.contains (r,c,dir) then
-        true
-    else 
-        let nv = visited |> Set.add (r,c,dir)
-        let (nr, nc) = dir.Move (r,c)
-        if grid |> isInBounds nr nc |> not then
-            false
-        else
-            match grid[nr,nc] with
-            | '.' -> 
-                isPatrolLoop grid (nr,nc) dir nv
-            | '#' -> 
-                let nd = dir.TurnRight()
-                isPatrolLoop grid (r,c) nd nv
-            | x -> failwithf "Not a valid cell %c" x
+let dirToInt = 
+    function
+    | North -> 1
+    | East -> 2
+    | South -> 4
+    | West -> 8
+
+let isPatrolLoopInt (grid:int[,]) (sr,sc) =
+    let allDirs = 1 ||| 2 ||| 4 ||| 8
+    let rec isPatrolLoopIntRec (r,c) dir =
+        let dirInt = dirToInt dir
+        let curr = grid[r,c]
+        // Check if the current cell was already passed in that direction
+        // using bitwise ops
+        if curr &&& dirInt = dirInt then
+            true
+        else 
+            // Every time we pass a cell, record the passage by 
+            // setting the direction bit in the cell itseld
+            grid[r,c] <- curr ||| dirInt
+            let (nr, nc) = dir.Move (r,c)
+            if grid |> isInBounds nr nc |> not then
+                false
+            else
+                let next = grid[nr,nc]
+                match next with
+                | x when x <= allDirs ->
+                    isPatrolLoopIntRec (nr,nc) dir
+                | System.Int32.MaxValue ->
+                    let nd = dir.TurnRight()
+                    isPatrolLoopIntRec (r,c) nd
+                | x -> failwithf "Not a valid cell %i" x
+    isPatrolLoopIntRec (sr,sc) Direction.North
 
 let solve2 input =
     let grid = getInput input
@@ -70,24 +87,28 @@ let solve2 input =
     Array2D.set grid startR startC '.'
 
     // Let's optimize this a little, we don't need to try all possible obstacle positions
-    // Only the cells that are patroled are potentiel targets
+    // Only the cells that are on the patrol route are potentiel targets
     let targets = 
         patrol grid (startR, startC) Direction.North (Set.empty |> Set.add (startR, startC))
         |> Set.remove (startR, startC)
 
     printfn "%i possible targets, compared to %i initially" targets.Count ((maxR grid)*(maxC grid))
 
+    // Transform the grid into an int grid, we're going to use the grid itself to store the route data
+    let grid = 
+        grid |> Array2D.map (fun c -> 
+        match c with
+        | '.' -> 0
+        | '#' -> System.Int32.MaxValue
+        | x -> failwithf "Not a valid cell %c" x
+        )
+
     let effectiveObstacles = 
         targets |>PSeq.choose(fun (r,c) -> 
             let gridCopy = Array2D.copy grid
-            if gridCopy[r,c] = '.' then
-                gridCopy[r,c] <- '#'
-                if isPatrolLoop gridCopy (startR, startC) Direction.North Set.empty then
-                    gridCopy[r,c] <- '.'
-                    Some (r,c)
-                else
-                    gridCopy[r,c] <- '.'
-                    None
+            gridCopy[r,c] <- System.Int32.MaxValue
+            if isPatrolLoopInt gridCopy (startR, startC) then
+                Some (r,c)
             else
                 None
         )
