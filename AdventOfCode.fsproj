@@ -12,13 +12,12 @@
         <Compile Include="Tools\Z3\Bool.fs" />
         <Compile Include="Tools\Z3\Int.fs" />
         <Compile Include="Tools\Z3\Real.fs" />
-        <None Include="Puzzles\**\*.fsx" />
         <None Include="Puzzles\**\*.linq" />
+        <None Include="Puzzles\**\*.fsx" />
         <Compile Include="Tools/*.fs" />
         <EmbeddedResource Remove="Input\**" />
         <Compile Include="Tools.fs" />
         <Compile Include="Program.fs" />
-        <Content Include="Input\2024\Day06_sample1.txt" />
         <None Include="initializePuzzle.fsx" />
     </ItemGroup>
 

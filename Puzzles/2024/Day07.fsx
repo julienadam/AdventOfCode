@@ -14,29 +14,26 @@ let getInput name =
         expected |> int64, numberList |> splitSpaceIntList64 |> Array.toList
     )
 
-let couldBeTrue expected (numbers:int64 list) =
+let couldBeTrue expected (numbers:int64 list) ops =
     let rec couldBeTrueRec current remainingNumbers =
-        match remainingNumbers with
-        | [] -> current = expected
-        | h::t -> 
-            if couldBeTrueRec (current + h) t then
-                true
-            else if couldBeTrueRec (current * h) t then
-                true
-            else
-                false
-
+        // Skip if we're already past the target
+        if current > expected then
+            false
+        else
+            match remainingNumbers with
+            | [] -> current = expected
+            | h::t -> ops |> List.exists (fun op -> couldBeTrueRec (op current h) t)
     couldBeTrueRec numbers.Head numbers.Tail
 
 let solve1 input =
     getInput input
-    |> Seq.filter (fun (exp, nums) -> couldBeTrue exp nums) // |> Seq.toArray |> Dump
+    |> Seq.filter (fun (exp, nums) -> couldBeTrue exp nums [(+);(*)])
     |> Seq.map fst
     |> Seq.sum
 
 solve1 "Day07.txt"
 
-let (||||) (a:int64) (b:int64) =
+let (||||) (a:int64) (b:int64) : int64=
     let mutable pow = 1L
     while pow <= b do pow <- pow * 10L
     a * pow + b
@@ -46,29 +43,9 @@ Check.That(1000 |||| 100).Equals(1000100)
 Check.That(1 |||| 56).Equals(156)
 Check.That(56 |||| 1).Equals(561)
 
-let couldBeTrueWithConcat expected (numbers:int64 list) =
-    let rec couldBeTrueWithConcatRec current remainingNumbers =
-        // Skip if we're already past the target
-        if current > expected then
-            false
-        else
-            match remainingNumbers with
-            | [] -> current = expected
-            | h::t -> 
-                if couldBeTrueWithConcatRec (current + h) t then
-                    true
-                else if couldBeTrueWithConcatRec (current * h) t then
-                    true
-                else if couldBeTrueWithConcatRec (current |||| h) t then
-                    true
-                else
-                    false
-
-    couldBeTrueWithConcatRec numbers.Head numbers.Tail
-
 let solve2 input =
     getInput input
-    |> Seq.filter (fun (exp, nums) -> couldBeTrueWithConcat exp nums) // |> Seq.toArray |> Dump
+    |> Seq.filter (fun (exp, nums) -> couldBeTrue exp nums [(||||);(+);(*)])
     |> Seq.map fst
     |> Seq.sum
 
