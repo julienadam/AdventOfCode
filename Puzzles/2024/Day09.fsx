@@ -1,4 +1,5 @@
 open System.Text
+open System.Diagnostics
 
 #time "on"
 #load "../../Tools.fs"
@@ -84,102 +85,63 @@ let solve1 (input:char array) = expand input
 
 solve1 ((getInput "Day09.txt").ToCharArray())
 
-let printblocks blocks =
-    let mutable currP = 0
-    blocks |> Seq.iter (fun (p,r,id) ->
-        for _ = currP to p - 1 do
-            printf "."
-            currP <-currP + 1
-        for _ = 1 to r do
-            printf "%i" id
-            currP <-currP + 1
-    )
-    printfn ""
-    blocks
-
-let expand2 (input:char array) =
+let defrag (input:char array) =
     let diskMap = 
         input 
         |> Seq.mapi (fun id c -> (id, ctoi c)) 
         |> Seq.scan (fun (index, repeats, _) (id, r) -> ((index + repeats), r, id)) (0,0,0)
         |> Seq.skip 1
 
-    let holes = 
+    // Put the index and size of each free space in an array
+    let freeSpaces = 
         diskMap 
         |> Seq.filter (fun (_,_,i) -> i % 2 = 1) 
         |> Seq.map (fun (index, size, _) -> index, size) 
         |> Seq.toArray
-        // |> Dump
 
+    // Put file index, size and id in a sequence
     let files = 
         diskMap 
         |> Seq.filter (fun (_,_,i) -> i % 2 = 0) 
         |> Seq.map (fun (index, size, id) -> index, size, id / 2) 
-        // |> Seq.toArray |>Dump
-        |> printblocks
 
-    // check remaining block
-    // check holes
-    // if a fitting hole is found
-    //  remove the block from the block list
-    //  resize the hole or remove it altogether
-    // if it does not
-    //  remove the block from the block list
-    //  put it in the positionned block list
-    // stop when no remaining blocks
+    // check remaining files list
+    //  stop when no remaining files
+    // take the first remaining file
+    // check free spaces
+    // if a free space big enough to fit the file is found
+    //  remove the file from the remaining file list
+    //  resize the free space or remove it altogether
+    // else
+    //  remove the file from the file list
+    //  put it in the defragged file list
 
-    let rec fillHoles holes remainingBlocks positionnedBlocks =
-        positionnedBlocks |> Seq.sortBy fst3 |> printblocks |> ignore
-        match remainingBlocks with 
-        | [] -> positionnedBlocks
-        | (blockPos, blockSize, fileId)::tailBlocks ->
-            printfn "Trying to move block %A" (blockPos, blockSize, fileId)
-            match holes |> Array.tryFindIndex (fun (_, holeSize) -> holeSize >= blockSize) with
+    let rec defragRec holes remainingFiles defraggedFiles =
+        match remainingFiles with 
+        | [] -> defraggedFiles
+        | (filePos, fileSize, fileId)::tail ->
+            match holes |> Array.tryFindIndex (fun (holePos, holeSize) -> holeSize >= fileSize && holePos < filePos) with
             | Some holeIndex ->
                 let (holePos, holeSize) = holes[holeIndex]
-                printfn "Found matching hole %A" (holePos, holeSize)
-                if blockSize = holeSize then
-                    printfn "Removing hole %A" (holePos, holeSize)
-                    fillHoles (holes |> Array.removeAt holeIndex) tailBlocks ((holePos, blockSize, fileId)::positionnedBlocks)
+                if fileSize = holeSize then
+                    defragRec (holes |> Array.removeAt holeIndex) tail ((holePos, fileSize, fileId)::defraggedFiles)
                 else
-                    printfn "Reducing hole %A to %A" (holePos, holeSize) (holePos + blockSize, holeSize - blockSize)
-                    Array.set holes holeIndex (holePos + blockSize, holeSize - blockSize)
-                    fillHoles holes tailBlocks ((holePos, blockSize, fileId)::positionnedBlocks)
+                    Array.set holes holeIndex (holePos + fileSize, holeSize - fileSize)
+                    defragRec holes tail ((holePos, fileSize, fileId)::defraggedFiles)
             | None ->
-                printfn "No hole found for %A, fixing in place" (blockPos, blockSize, fileId)
-                fillHoles holes tailBlocks ((blockPos, blockSize, fileId)::positionnedBlocks)
-           
-    fillHoles holes (files |> Seq.skip 1 |> Seq.rev |> Seq.toList) [files |> Seq.head]
+                defragRec holes tail ((filePos, fileSize, fileId)::defraggedFiles)
+
+    // start recursion with the first file set in place and the rest in reverse order is our remaining block list
+    defragRec freeSpaces (files |> Seq.skip 1 |> Seq.rev |> Seq.toList) [files |> Seq.head]
 
 let checksum blocks = blocks |> Seq.sumBy (fun (p,r,id) -> [0..r-1] |> Seq.sumBy (fun offset -> ((p+offset)*id) |> int64))
 
 let solve2 (input:char array) = 
-    let blocks = expand2 input
-    blocks 
-    |> Seq.sortBy fst3 
-    // |> Seq.toArray |> Dump
-    // |> printblocks
+    let files = defrag input
+    files 
+    |> Seq.sortBy fst3 // |> Seq.toArray |> Dump
     |> checksum
-
-solve2 (sample1.ToCharArray())
+    
+// solve2 (sample1.ToCharArray())
 
 solve2 ((getInput "Day09.txt").ToCharArray())
-
-
-//if blockPos < holePos then
-//    fillHoles holes remainingBlocks ((holePos, blockSize, fileId)::positionnedBlocks)
-//else if blockSize = holeSize then
-//    fillHoles remainingHoles remainingBlocks ((holePos, blockSize, fileId)::positionnedBlocks)
-//else if blockSize < holeSize then
-//    fillHoles ((holePos+blockSize, holeSize - blockSize)::remainingHoles) remainingBlocks ((holePos, blockSize, fileId)::positionnedBlocks)
-//else
-//    fillHoles holes remainingBlocks ((blockPos, blockSize, fileId)::positionnedBlocks)
-
-//match remainingBlocks |> Array.tryFindIndex (fun (_,blockSize,_) -> blockSize <= holeSize) with
-//| None -> List.concat [positionnedBlocks; remainingBlocks |> Array.toList]
-//| Some blockIndex ->
-//    let (_, blockSize, fileId) = remainingBlocks[blockIndex]
-//    if blockSize = holeSize then
-//        fillHoles tail (remainingBlocks |> Array.removeAt blockIndex) ((holePos, blockSize, fileId)::positionnedBlocks)
-//    else
-//        fillHoles ((holePos+blockSize, holeSize - blockSize)::tail) (remainingBlocks |> Array.removeAt blockIndex) ((holePos, blockSize, fileId)::positionnedBlocks)
