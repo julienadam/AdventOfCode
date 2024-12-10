@@ -13,7 +13,7 @@ let getInput name = File.ReadAllText(getInputPath2024 name)
 
 let sample1 = "2333133121414131402"
 
-let ctoi (c:char) = (c |> int) - ('0' |> int)
+let inline ctoi (c:char) = (c |> int) - ('0' |> int)
 
 let expand (input:char array) =
     let debug = new StringBuilder()
@@ -29,7 +29,6 @@ let expand (input:char array) =
                 // Add the remaining quantity
                 let mutable checksum = checksum
                 for x = 0 to qty - 1 do
-                    //printfn "Adding %i at position %i (remaining)" id (outIdx + x)
                     debug.Append(id) |> ignore
                     checksum <- checksum + ((id * (outIdx + x)) |> int64)
                 checksum
@@ -44,7 +43,6 @@ let expand (input:char array) =
                 for x = 0 to repeats - 1 do
                     // Add the id multiplied by the position in the output
                     // Do that for each repetition in the output
-                    //printfn "Adding %i at position %i (file)" id (outIdx + x)
                     debug.Append(id) |> ignore
                     nc <- nc + ((id * (outIdx + x)) |> int64)
 
@@ -62,7 +60,6 @@ let expand (input:char array) =
                     match mov with
                     | Some (qty, id) when qty > 0 ->
                         debug.Append(id) |> ignore
-                        //printfn "Adding %i at position %i (free)" id outIdx
                         checksum <- checksum + ((id * outIdx) |> int64)
                         outIdx <- outIdx + 1
                         mov <- Some (qty - 1, id)
@@ -116,20 +113,20 @@ let defrag (input:char array) =
     //  remove the file from the file list
     //  put it in the defragged file list
 
-    let rec defragRec holes remainingFiles defraggedFiles =
+    let rec defragRec freeSpaces remainingFiles defraggedFiles =
         match remainingFiles with 
         | [] -> defraggedFiles
         | (filePos, fileSize, fileId)::tail ->
-            match holes |> Array.tryFindIndex (fun (holePos, holeSize) -> holeSize >= fileSize && holePos < filePos) with
-            | Some holeIndex ->
-                let (holePos, holeSize) = holes[holeIndex]
-                if fileSize = holeSize then
-                    defragRec (holes |> Array.removeAt holeIndex) tail ((holePos, fileSize, fileId)::defraggedFiles)
+            match freeSpaces |> Array.tryFindIndex (fun (freePos, freeSize) -> freeSize >= fileSize && freePos < filePos) with
+            | Some freeIndex ->
+                let (freePos, freeSize) = freeSpaces[freeIndex]
+                if fileSize = freeSize then
+                    defragRec (freeSpaces |> Array.removeAt freeIndex) tail ((freePos, fileSize, fileId)::defraggedFiles)
                 else
-                    Array.set holes holeIndex (holePos + fileSize, holeSize - fileSize)
-                    defragRec holes tail ((holePos, fileSize, fileId)::defraggedFiles)
+                    Array.set freeSpaces freeIndex (freePos + fileSize, freeSize - fileSize)
+                    defragRec freeSpaces tail ((freePos, fileSize, fileId)::defraggedFiles)
             | None ->
-                defragRec holes tail ((filePos, fileSize, fileId)::defraggedFiles)
+                defragRec freeSpaces tail ((filePos, fileSize, fileId)::defraggedFiles)
 
     // start recursion with the first file set in place and the rest in reverse order is our remaining block list
     defragRec freeSpaces (files |> Seq.skip 1 |> Seq.rev |> Seq.toList) [files |> Seq.head]
