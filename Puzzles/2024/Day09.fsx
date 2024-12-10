@@ -129,7 +129,7 @@ let expand2 (input:char array) =
     // stop when no remaining blocks
 
     let rec fillHoles holes remainingBlocks positionnedBlocks =
-        // positionnedBlocks |> Seq.sortBy fst3 |> printblocks |> ignore
+        positionnedBlocks |> Seq.sortBy fst3 |> printblocks |> ignore
         match remainingBlocks with 
         | [] -> positionnedBlocks
         | (blockPos, blockSize, fileId)::tailBlocks ->
