@@ -1,9 +1,11 @@
 #time "on"
 #load "../../Tools.fs"
 #load "../../Tools/Digits.fs"
+#r "nuget: FSharp.Collections.ParallelSeq"
 
 open System.IO
 open AdventOfCode
+open FSharp.Collections.ParallelSeq
 open Checked
 
 let getInput name = 
@@ -23,7 +25,7 @@ let blinkSingle s =
             seq { yield x * 2024L }
 
 let memoizedBlinkAll initialStones totalSteps =
-    let memo = new System.Collections.Generic.Dictionary<(int*int64), int64>()
+    let memo = new System.Collections.Concurrent.ConcurrentDictionary<(int*int64), int64>()
 
     let rec blink2 stone step =
         match step with
@@ -38,10 +40,10 @@ let memoizedBlinkAll initialStones totalSteps =
             | (false, _) -> 
                 let nextStones = blinkSingle stone
                 let r = nextStones |> Seq.sumBy (fun ns -> blink2 ns (step + 1))
-                memo.Add((step, stone), r)
+                memo.TryAdd((step, stone), r) |> ignore
                 r
 
-    let result = initialStones |> Seq.sumBy(fun s -> blink2 s 0)
+    let result = initialStones |> PSeq.sumBy(fun s -> blink2 s 0)
     printfn "memoized a total %i intermediate results " memo.Count
     result
 
