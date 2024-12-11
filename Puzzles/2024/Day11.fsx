@@ -1,8 +1,7 @@
 #time "on"
 #load "../../Tools.fs"
-#r "nuget: NFluent"
+#load "../../Tools/Digits.fs"
 
-open System
 open System.IO
 open AdventOfCode
 open Checked
@@ -10,25 +9,6 @@ open Checked
 let getInput name = 
     File.ReadAllText(getInputPath2024 name) 
     |> splitSpaceIntList64
-
-let digitsRev (a:int64) : int64 seq = seq {
-    if a = 0 then
-        yield 0
-    else
-        let mutable a = a
-        while a > 0 do 
-            yield a % 10L
-            a <- a / 10L
-        }
-
-let digits = digitsRev >> Seq.rev
-
-let (||||) (a:int64) (b:int64) : int64=
-    if b = 0 then a * 10L
-    else
-        let mutable pow = 1L
-        while pow <= b do pow <- pow * 10L
-        a * pow + b
 
 let blinkSingle s =
     match s with
