@@ -2,6 +2,30 @@ namespace AdventOfCode
 
 module Array2DTools =
 
+    let tryGetUp row col (grid:'a[,]) =
+        if row > 0 then
+            Some ((row - 1), col, grid.[(row - 1), col])
+        else
+            None
+
+    let tryGetDown row col (grid:'a[,]) =
+        if row < ((grid |> Array2D.length1) - 1) then
+            Some ((row + 1), col, grid.[(row + 1), col])
+        else
+            None
+
+    let tryGetLeft row col (grid:'a[,]) =
+        if col > 0 then
+            Some (row, (col - 1), grid.[row, (col - 1)])
+        else
+            None
+
+    let tryGetRight row col (grid:'a[,]) =
+        if col < ((grid |> Array2D.length2) - 1) then
+            Some (row, (col + 1), grid.[row, (col + 1)])
+        else
+            None
+
     let getAdjacent row col (grid:'a[,]) = seq {
         if row > 0 then
             yield ((row - 1), col, grid.[(row - 1), col])
