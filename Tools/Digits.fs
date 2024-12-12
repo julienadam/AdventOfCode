@@ -1,16 +1,17 @@
 ﻿namespace AdventOfCode
 
+open System.Runtime.CompilerServices
+
 [<AutoOpen>]
 module Digits =
     open System
+    open System.Numerics
 
     /// Counts the digits in an int32 (log10 based)
     let inline numDigits n = if n = 0 then 1 else (Math.Floor(Math.Log10(n) + 1.0)) |> int
     
     /// Counts the digits in an int32 (log10 based)
     let inline numDigits64 (n:int64) = if n = 0 then 1 else (Math.Floor(Math.Log10(n |> float) + 1.0)) |> int
-
-    System.UInt64.MaxValue
 
     // Counts the digits using good old fashioned divisions
     let inline countDigits64 (n:int64) = 

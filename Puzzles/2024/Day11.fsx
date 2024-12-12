@@ -21,8 +21,7 @@ let memoizedBlinkAll totalSteps initialStones =
             1L
         | _ ->
             match memo.TryGetValue((step, stone)) with
-            | (true, memoized) -> 
-                memoized
+            | (true, memoized) -> memoized
             | (false, _) -> 
                 if stone = 0L then
                     let r = blink2 (1L) (step + 1)
