@@ -77,49 +77,39 @@ solve1 "Day15.txt"
 
 let expandWarehouse (input:string) = input.Replace("#", "##").Replace(".", "..").Replace("O", "[]").Replace("@", "@.")
 
-/// try to move in the direction provided
-/// returns the move if it's possible, or an empty list
-/// it's recusive so if it finds a box in its way it will try to move it
-/// and this box will also try to move etc.
-// the final result is a list of moves triggered by the initial move
-// handles the larger boxes
+type CrateMove =
+    | Horizontal
+    /// Vertical move with the column of the other half of the box
+    | Vertical of int 
+
+/// Same as before except handles the larger boxes
+/// if the robot tries to push up or down one half of a crate append 2 moves for both halves
+/// instead of just one
 let rec tryMove2 (r,c) (grid:char[,]) moveFunc move =
-    //match m with
-    //| '<' -> tryMove (r,c) grid Array2DTools.tryGetLeft
-    //| '>' -> tryMove (r,c) grid Array2DTools.tryGetRight
-    //| '^' -> 
-    //| 'v' -> 
-    
     match grid |> moveFunc r c with
     | Some (ar, ac, av) when av = '.' -> [(r,c),(ar,ac)]
-    | Some (ar, ac, av) when av = ']' -> 
-        match move with 
-        | '^'
-        | 'v' ->
-            match (tryMove2 (ar,ac) grid moveFunc move), (tryMove2 (ar,ac-1) grid moveFunc move) with
-            | [],_
-            | _,[] -> []
-            | (half1,half2) -> ((r,c),(ar,ac))::(List.concat [half1; half2])
-        | _ ->
-            match tryMove2 (ar,ac) grid moveFunc move with
-            | [] -> []
-            | x -> ((r,c),(ar,ac))::x
-
-    | Some (ar, ac, av) when av = '[' -> 
-        match move with 
-        | '^'
-        | 'v' ->
-            match (tryMove2 (ar,ac) grid moveFunc move), (tryMove2 (ar,ac+1) grid moveFunc move) with
-            | [],_
-            | _,[] -> []
-            | (half1,half2) -> ((r,c),(ar,ac))::(List.concat [half1; half2])
-        | _ ->
-            match tryMove2 (ar,ac) grid moveFunc move with
-            | [] -> []
-            | x -> ((r,c),(ar,ac))::x
     | Some (_, _, av) when av = '#' -> []
+    | Some (ar, ac, av) ->
+        // Classify the moves by type
+        let crateMove = 
+            match (move,av) with
+            | '<', _ | '>', _ -> Horizontal
+            | _, '[' -> Vertical (ac+1)
+            | _, ']' -> Vertical (ac-1)
+            | x -> failwithf "invalid move combination %A" x
+
+        match crateMove with
+        | Horizontal ->
+            match tryMove2 (ar,ac) grid moveFunc move with
+            | [] -> []
+            | x -> ((r,c),(ar,ac))::x
+        | Vertical otherC ->
+            // Try to move both halves, if both succeed, concat the moves and add the robot move at the front
+            match (tryMove2 (ar,ac) grid moveFunc move), (tryMove2 (ar,otherC) grid moveFunc move) with
+            | [],_
+            | _,[] -> []
+            | (half1,half2) -> ((r,c),(ar,ac))::(List.concat [half1; half2])
     | None -> []
-    | x -> failwithf "Invalid cell contents %A" x
 
 /// applies all the moves in reverse order and returns the
 /// final position of the robot, removes duplicate moves
@@ -156,4 +146,4 @@ let solve2 input =
 
 Check.That(solve2 "Day15_sample1.txt").Equals(9021)
 
-solve2 "Day15_sample1.txt"
+solve2 "Day15.txt"
