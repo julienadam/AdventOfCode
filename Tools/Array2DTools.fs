@@ -96,6 +96,14 @@ module Array2DTools =
                 yield i,j, array.[i,j]
     }
 
+    let filteri (filter:(int -> int -> 'a -> bool)) (grid:'a[,]) = seq {
+        for r = 0 to (grid |> Array2D.length1) - 1 do
+            for c = 0 to (grid |> Array2D.length2) - 1 do
+                let v = grid.[r,c]
+                if filter r c v then
+                    yield r,c, v
+    }
+
     let printGrid (grid:'a[,]) =
         for i in [0..grid.GetLength(0) - 1] do
             for j in [0..grid.GetLength(1) - 1] do
