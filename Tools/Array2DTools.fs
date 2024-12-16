@@ -104,6 +104,12 @@ module Array2DTools =
                     yield r,c, v
     }
 
+    let findi (filter:(int -> int -> 'a -> bool)) (grid:'a[,]) = 
+        grid |> filteri filter |> Seq.head
+
+    let tryFindi (filter:(int -> int -> 'a -> bool)) (grid:'a[,]) = 
+        grid |> filteri filter |> Seq.tryHead
+
     let printGrid (grid:'a[,]) =
         for i in [0..grid.GetLength(0) - 1] do
             for j in [0..grid.GetLength(1) - 1] do

@@ -8,7 +8,19 @@
     <ItemGroup>
         <None Include=".gitignore" />
         <None Include="AdventOfCode.sln" />
-        <Compile Include="Tools/*.fs" />
+        <Compile Include="Tools\Dijkstra.fs" />
+        <PackageReference Include="OptimizedPriorityQueue" Version="5.1.0" />
+        <Compile Include="Tools\Array2DTools.fs" />
+        <Compile Include="Tools\AStar.fs" />
+        <Compile Include="Tools\Digits.fs" />
+        <Compile Include="Tools\Directions.fs" />
+        <Compile Include="Tools\Distance.fs" />
+        <Compile Include="Tools\MathEx.fs" />
+        <Compile Include="Tools\Queues.fs" />
+        <Compile Include="Tools\Ranges.fs" />
+        <Compile Include="Tools\RegexTools.fs" />
+        <Compile Include="Tools\SeqEx.fs" />
+        <Compile Include="Tools\SparseGrid.fs" />
         <Compile Include="Tools\Z3\Theory.fs" />
         <Compile Include="Tools\Z3\Bool.fs" />
         <Compile Include="Tools\Z3\Int.fs" />

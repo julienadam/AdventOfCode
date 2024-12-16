@@ -31,6 +31,20 @@ module Directions =
             | South -> p ++ (mul south dist)
             | East -> p ++ (mul east dist)
             | West -> p ++ (mul west dist)
+        member this.GetDegrees() = 
+            match this with
+            | North -> 0
+            | East -> 90
+            | South -> 180
+            | West -> 270
+        static member FromDegrees(deg: int) =
+            match deg % 360 with
+            | 0 -> North
+            | 90 -> East
+            | 180 -> South
+            | 270 -> West
+            | _ -> failwithf "Invalid degrees for directions, must be a multiple of 90°, was %i" deg
+
     type Compass =
     | Up
     | Down

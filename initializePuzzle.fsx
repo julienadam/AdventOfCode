@@ -44,6 +44,7 @@ let fsxContents =
 open System
 open System.IO
 open AdventOfCode
+open Checked
 
 let getInput name = File.ReadAllLines(getInputPath%i name)
 
