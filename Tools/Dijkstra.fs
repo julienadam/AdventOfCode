@@ -45,15 +45,21 @@ let private solveAll start vertices neighbors distanceBetween =
                     prevs <- prevs |> Map.add v.Value (Some u.Value)
                     queue.UpdatePriority(v, alt))
 
-    prevs
+    prevs, dists
+
+
+let getDistMatrix start vertices neighbors distance =
+
+    let _, dists = solveAll start vertices neighbors distance
+    dists
 
 let solve start goal vertices neighbors distance =
 
-    let prevs = solveAll start vertices neighbors distance
+    let prevs, dists = solveAll start vertices neighbors distance
 
     let rec makePath current =
         match prevs.[current] with
         | Some prev -> (makePath prev) @ [ current ]
         | None -> [ current ]
 
-    makePath goal
+    makePath goal, dists
