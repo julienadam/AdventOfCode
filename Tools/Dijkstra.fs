@@ -3,17 +3,22 @@
 open System
 open Microsoft.FSharp.Collections
 open Microsoft.FSharp.Core
+open System.Collections.Generic
 open Priority_Queue
 
 type private Node<'a>(value: 'a) =
     inherit FastPriorityQueueNode()
     member this.Value = value
 
+let inline private createOrUpdate (key:'a) (value:'b) (dic:Dictionary<'a,'b>) =
+    if dic.TryAdd(key, value) = false then
+        dic[key] <- value
+
 let private solveAll start vertices neighbors distanceBetween =
 
     let mutable queue = FastPriorityQueue(vertices |> List.length)
-    let mutable dists = Map.empty
-    let mutable prevs = Map.empty
+    let dists = new Dictionary<'a, float32>()
+    let prevs = new Dictionary<'a, 'a option>()
     let mutable nodeByVertex = Map.empty
 
     vertices
@@ -21,11 +26,11 @@ let private solveAll start vertices neighbors distanceBetween =
         (fun v ->
             let node = Node(v)
             if v <> start then
-                dists <- dists |> Map.add v Single.MaxValue
+                dists |> createOrUpdate v Single.MaxValue
             else
-                dists <- dists |> Map.add v 0f
+                dists |> createOrUpdate v 0f
 
-            prevs <- prevs |> Map.add v None
+            prevs |> createOrUpdate v None
             queue.Enqueue(node,  dists.[v])
             nodeByVertex <- nodeByVertex |> Map.add v node)
 
@@ -41,8 +46,8 @@ let private solveAll start vertices neighbors distanceBetween =
                 let alt = dists.[u.Value] + distanceBetween u.Value v.Value
 
                 if alt < dists.[v.Value] then
-                    dists <- dists |> Map.add v.Value alt
-                    prevs <- prevs |> Map.add v.Value (Some u.Value)
+                    dists |> createOrUpdate v.Value alt
+                    prevs |> createOrUpdate v.Value (Some u.Value)
                     queue.UpdatePriority(v, alt))
 
     prevs, dists
