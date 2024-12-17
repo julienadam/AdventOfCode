@@ -1,4 +1,5 @@
-﻿#time "on"
+﻿
+#time "on"
 #load "../../Tools.fs"
 #load "../../Tools/Array2DTools.fs"
 #load "../../Tools/Distance.fs"
@@ -27,9 +28,12 @@ let cost ((p1,d1):State) ((p2,d2):State) =
     if p1 = p2 then 
         if d1 = d2 then
             failwithf "Should not have 2 steps with the same pos and dir"
-        let l = (((360 + d1.GetDegrees() - d2.GetDegrees()) % 360 / 90) |> float32) 
-        let r = (((360 + d2.GetDegrees() - d1.GetDegrees()) % 360 / 90) |> float32) 
-        (min l r) * 1000.0f
+        if d1.TurnLeft() = d2 || d1.TurnRight() = d2 then
+            1000.0f
+        else if d1.TurnLeft().TurnLeft() = d2 then
+            2000.0f
+        else
+            failwithf("Not a valid turn")
     else
         if d1 <> d2 then
             failwithf "Should not have 2 steps differing by both position and direction "
@@ -38,9 +42,11 @@ let cost ((p1,d1):State) ((p2,d2):State) =
         1.0f
 
 let dirToFun = function | North -> Array2DTools.tryGetUp | East -> Array2DTools.tryGetRight | South -> Array2DTools.tryGetDown | West -> Array2DTools.tryGetLeft
+let dirToFunRev = function | South -> Array2DTools.tryGetUp | West -> Array2DTools.tryGetRight | North -> Array2DTools.tryGetDown | East -> Array2DTools.tryGetLeft
 
-let getNeighbors grid ((r,c), dir) = seq {
-    match grid |> (dirToFun dir) r c with
+let getNeighbors grid doRev ((r,c), dir) = seq {
+    let f = if doRev then dirToFunRev else dirToFun
+    match grid |> (f dir) r c with
     | Some (ar,ac,v) when v = '.' -> yield ((ar,ac), dir) 
     | _ -> ()
     yield (r,c), dir.TurnLeft()
@@ -58,43 +64,33 @@ let getVertices grid =
 #load "../../Tools/Dijkstra.fs"
 
 let getDijkstraMatrix grid start =
-    Dijkstra.getDistMatrix (start,East) (getVertices grid) ((getNeighbors grid) >> Seq.toList) (fun a b -> cost a b |> float32)
- 
+    Dijkstra.getDistMatrix (start,East) (getVertices grid) ((getNeighbors grid false) >> Seq.toList) (fun a b -> cost a b |> float32)
+
+open System.Collections.Generic
+
+// Find the end state (position and direction) with the best score
+let bestTile (dists:IDictionary<State,float32>) target =
+    dists 
+    |> Seq.filter(fun kvp -> 
+        let ((r,c),_) = kvp.Key
+        (r,c) = target)
+    |> Seq.minBy (fun kvp -> kvp.Value)
+
 let solve1Dij input =
     let grid, start, target = getInput input
     let dists = getDijkstraMatrix grid start
-    let arrivalTile = 
-        dists 
-        |> Seq.filter(fun kvp -> 
-            let ((r,c),_) = kvp.Key 
-            (r,c) = target)
-        |> Seq.minBy (fun kvp -> kvp.Value)
+    let arrivalTile = bestTile dists target
     arrivalTile.Value
 
 Check.That(solve1Dij "Day16_sample1.txt").Equals(7036.0)
 Check.That(solve1Dij "Day16_sample2.txt").Equals(11048.0)
 solve1Dij "Day16.txt"
 
-let dirToFunRev = function | South -> Array2DTools.tryGetUp | West -> Array2DTools.tryGetRight | North -> Array2DTools.tryGetDown | East -> Array2DTools.tryGetLeft
-
-let getNeighborsRev grid ((r,c), dir) = seq {
-    match grid |> (dirToFunRev dir) r c with
-    | Some (ar,ac,v) when v = '.' -> yield ((ar,ac), dir) 
-    | _ -> ()
-    yield (r,c), dir.TurnLeft()
-    yield (r,c), dir.TurnRight()
-}
-
 let solve2 input =
     let grid, start, target = getInput input
     let dists = getDijkstraMatrix grid start
-    let arrivalTile = 
-        dists 
-        |> Seq.filter(fun kvp -> 
-            let ((r,c),_) = kvp.Key 
-            (r,c) = target)
-        |> Seq.minBy (fun kvp -> kvp.Value)
-    let (finalPos,dir) = arrivalTile.Key
+    let arrivalTile = bestTile dists target
+    let (finalPos, finalDir) = arrivalTile.Key
     let visited = new System.Collections.Generic.HashSet<(int*int)>([finalPos])
 
     let rec walkBack (pos,dir) =
@@ -106,14 +102,14 @@ let solve2 input =
             // keep only the ones that would result in the same score as the current score
             // if we made the move from the neighbor to the current position
             // and apply recursion to all candidates until we reach the start position
-            getNeighborsRev grid (pos,dir)
+            getNeighbors grid true (pos,dir)
             |> Seq.filter (fun n -> dists[n] + cost n (pos,dir) = score)
             |> Seq.iter (fun ((r,c), d) -> 
                 visited.Add((r,c)) |> ignore
                 walkBack ((r,c), d)
             )
 
-    walkBack (finalPos,dir)
+    walkBack (finalPos, finalDir)
 
     visited.Count
 
