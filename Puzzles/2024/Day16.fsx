@@ -12,9 +12,7 @@ open AdventOfCode
 open NFluent
 
 let getInput name = 
-    let grid = 
-        File.ReadAllLines(getInputPath2024 name)
-        |> array2D
+    let grid = File.ReadAllLines(getInputPath2024 name) |> array2D
     let (sr,sc,_) = grid |> Array2DTools.findi (fun _ _ v -> v = 'S')
     let (er,ec,_) = grid |> Array2DTools.findi (fun _ _ v -> v = 'E')
     grid[sr,sc] <- '.'
@@ -55,8 +53,7 @@ let getNeighbors grid doRev ((r,c), dir) = seq {
 
 let getVertices grid =
     grid 
-    |> Array2DTools.enumArray2d 
-    |> Seq.filter (fun (_,_,v) -> v= '.')
+    |> Array2DTools.filteri (fun _ _ v -> v= '.')
     |> Seq.collect (fun (r,c,_) -> [North;East;South;West] |> Seq.map (fun d -> ((r,c),d)))
     |> Seq.toList
 

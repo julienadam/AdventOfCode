@@ -19,20 +19,20 @@ let private solveAll start vertices neighbors distanceBetween =
     let mutable queue = FastPriorityQueue(vertices |> List.length)
     let dists = new Dictionary<'a, float32>()
     let prevs = new Dictionary<'a, 'a option>()
-    let mutable nodeByVertex = Map.empty
+    let nodeByVertex = new Dictionary<'a, Node<'a>>()
 
     vertices
-    |> List.iter
-        (fun v ->
-            let node = Node(v)
-            if v <> start then
-                dists |> createOrUpdate v Single.MaxValue
-            else
-                dists |> createOrUpdate v 0f
+    |> List.iter (fun v ->
+        let node = Node(v)
+        if v <> start then
+            dists |> createOrUpdate v Single.MaxValue
+        else
+            dists |> createOrUpdate v 0f
 
-            prevs |> createOrUpdate v None
-            queue.Enqueue(node,  dists.[v])
-            nodeByVertex <- nodeByVertex |> Map.add v node)
+        prevs |> createOrUpdate v None
+        queue.Enqueue(node,  dists.[v])
+        nodeByVertex |> createOrUpdate v node
+    )
 
     while not <| (queue.Count = 0) do
         let u = queue.Dequeue()
@@ -41,14 +41,14 @@ let private solveAll start vertices neighbors distanceBetween =
         |> neighbors
         |> List.map (fun v -> nodeByVertex.[v])
         |> List.filter queue.Contains
-        |> List.iter
-            (fun v ->
-                let alt = dists.[u.Value] + distanceBetween u.Value v.Value
+        |> List.iter (fun v ->
+            let alt = dists.[u.Value] + distanceBetween u.Value v.Value
 
-                if alt < dists.[v.Value] then
-                    dists |> createOrUpdate v.Value alt
-                    prevs |> createOrUpdate v.Value (Some u.Value)
-                    queue.UpdatePriority(v, alt))
+            if alt < dists.[v.Value] then
+                dists |> createOrUpdate v.Value alt
+                prevs |> createOrUpdate v.Value (Some u.Value)
+                queue.UpdatePriority(v, alt)
+        )
 
     prevs, dists
 
