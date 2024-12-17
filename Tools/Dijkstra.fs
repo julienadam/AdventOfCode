@@ -48,10 +48,7 @@ let private solveAll start vertices neighbors distanceBetween =
     prevs, dists
 
 
-let getDistMatrix start vertices neighbors distance =
-
-    let _, dists = solveAll start vertices neighbors distance
-    dists
+let getDistMatrix start vertices neighbors distance = solveAll start vertices neighbors distance |> snd
 
 let solve start goal vertices neighbors distance =
 
