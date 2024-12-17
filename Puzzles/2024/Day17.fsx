@@ -1,41 +1,45 @@
+open System.Diagnostics
+
 #time "on"
 #load "../../Tools.fs"
 #r "nuget: NFluent"
+#r "nuget: FSharp.Collections.ParallelSeq"
 
 open System
 open System.IO
 open AdventOfCode
 open Checked
 open NFluent
+open FSharp.Collections.ParallelSeq
 
 let getInput name = 
     let lines = File.ReadAllLines(getInputPath2024 name)
     lines[0].Substring(12) |> int, lines[1].Substring(12) |> int, lines[2].Substring(12) |> int, lines[4].Substring(9) |> splitIntList
 
 type Machine = {
-    mutable regA: int
-    mutable regB: int
-    mutable regC: int
+    mutable regA: int64
+    mutable regB: int64
+    mutable regC: int64
     mutable ip: int
-    mutable output: int list
+    mutable output: int64 list
     program: int array
 }
 with
     member this.combo x = 
         match x with
-        | 0 | 1 | 2 | 3 -> x
+        | 0 | 1 | 2 | 3 -> x |> int64
         | 4 -> this.regA
         | 5 -> this.regB
         | 6 -> this.regC
         | _ -> failwithf "Invalid combo operand %i" x
     member this.adv x = 
-        this.regA <- this.regA / (1 <<< (this.combo x))
+        this.regA <- this.regA / (1L <<< (this.combo x |> int32))
         this.ip <- this.ip + 2
     member this.bxl x = 
         this.regB <- this.regB ^^^ x
         this.ip <- this.ip + 2
     member this.bst x = 
-        this.regB <- (this.combo x) % 8
+        this.regB <- (this.combo x) % 8L
         this.ip <- this.ip + 2
     member this.jnz x =
         if this.regA = 0 then
@@ -46,13 +50,13 @@ with
         this.regB <- this.regB ^^^ this.regC
         this.ip <- this.ip + 2
     member this.out x =
-        this.output <- ((this.combo x) % 8) :: this.output
+        this.output <- ((this.combo x) % 8L) :: this.output
         this.ip <- this.ip + 2
     member this.bdv x =
-        this.regB <- this.regA / (1 <<< (this.combo x))
+        this.regB <- this.regA / (1L <<< (this.combo x |> int32))
         this.ip <- this.ip + 2
     member this.cdv x =
-        this.regC <- this.regA / (1 <<< (this.combo x))
+        this.regC <- this.regA / (1L <<< (this.combo x |> int32))
         this.ip <- this.ip + 2
     member this.printOutput () = String.Join(",", this.output |> List.rev |> Seq.map string)
     member this.step () =
@@ -88,10 +92,26 @@ Check.That(solve1 "Day17_sample1.txt").Equals("4,6,3,5,6,3,5,2,1,0")
 
 solve1 "Day17.txt"
 
+let solve2 input =
+    let a, b, c, prog = getInput input // |> Dump
+    let progRef = prog |> Seq.rev |> Seq.map int64 |> Seq.toList
+    let counter = ref (Int32.MaxValue |> int64)
+    let sw = Stopwatch.StartNew()
+    use timer = new System.Threading.Timer((fun s -> 
+        let percent = (counter.Value |> double) * 100.0 / (Int64.MaxValue |> double)
+        printfn "%A %i %f2%%" sw.Elapsed (counter.Value) percent), (), TimeSpan.Zero, TimeSpan.FromSeconds(1))
 
-
-
-
+    [0..7] |> PSeq.iter(fun off ->
+        Seq.initInfinite (fun i -> i * 8 + off)
+        |> Seq.iter(fun i ->
+            System.Threading.Interlocked.Increment(counter) |> ignore
+            let r = run { regA = i; regB = b; regC = c; program = prog; ip = 0; output = [] }
+            if r.output = progRef then
+                printfn ""
+                printfn "%i" i
+                failwithf "Solution found")
+    )
+solve2 "Day17.txt"
 
 // Unit tests
 
