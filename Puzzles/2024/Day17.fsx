@@ -1,21 +1,18 @@
-open System.Diagnostics
-
 #time "on"
 #load "../../Tools.fs"
 #r "nuget: NFluent"
-#r "nuget: FSharp.Collections.ParallelSeq"
 
 open System
 open System.IO
 open AdventOfCode
 open Checked
 open NFluent
-open FSharp.Collections.ParallelSeq
 
 let getInput name = 
     let lines = File.ReadAllLines(getInputPath2024 name)
     lines[0].Substring(12) |> int, lines[1].Substring(12) |> int, lines[2].Substring(12) |> int, lines[4].Substring(9) |> splitIntList
 
+// First part is based on a simulator, works for all inputs
 type Machine = {
     mutable regA: int64
     mutable regB: int64
@@ -92,25 +89,40 @@ Check.That(solve1 "Day17_sample1.txt").Equals("4,6,3,5,6,3,5,2,1,0")
 
 solve1 "Day17.txt"
 
-let solve2 input =
-    let a, b, c, prog = getInput input // |> Dump
-    let progRef = prog |> Seq.rev |> Seq.map int64 |> Seq.toList
-    let counter = ref (Int32.MaxValue |> int64)
-    let sw = Stopwatch.StartNew()
-    use timer = new System.Threading.Timer((fun s -> 
-        let percent = (counter.Value |> double) * 100.0 / (Int64.MaxValue |> double)
-        printfn "%A %i %f2%%" sw.Elapsed (counter.Value) percent), (), TimeSpan.Zero, TimeSpan.FromSeconds(1))
+/// Applies the program except the last instruction which loops back to the start
+let applyProgramMachine m a =
+    let mutable machine = { m with regA = a }
+    let computationSteps = (machine.program.Length / 2) - 1
+    for _ = 1 to computationSteps do
+        machine <- machine.step().Value
+    if machine.output.Length <> 1 then // At the end of one iteration we should have 1 result
+        failwithf "Output is more than 1 elements for a single loop, should not happen"
+    machine.output[0]
 
-    [0..7] |> PSeq.iter(fun off ->
-        Seq.initInfinite (fun i -> i * 8 + off)
-        |> Seq.iter(fun i ->
-            System.Threading.Interlocked.Increment(counter) |> ignore
-            let r = run { regA = i; regB = b; regC = c; program = prog; ip = 0; output = [] }
-            if r.output = progRef then
-                printfn ""
-                printfn "%i" i
-                failwithf "Solution found")
-    )
+let solve2 input =
+    let a,b,c, prog = getInput input
+    let expectedList = prog |> Seq.map int64 |> Seq.toList |> List.rev
+    let mutable best = Int64.MaxValue
+    let template = { regA = a; regB = b; regC = c; program = prog; ip = 0; output = [] }
+    let apply = applyProgramMachine template
+
+    // Take whatever set of bits we currently have then try all combinations of 3 bits that, if added to 
+    // the end, and passed into the program, outputs the expected result which is the current head of 
+    // the remaining expectations, rinse and repeat until we either reach a dead end (no combination possible)
+    // or a valid integer. If it's better than the one we have, keep it.
+    let rec findBits (currentBits:int64) remainingExpectations =
+        match remainingExpectations with
+        | [] -> best <- min currentBits best
+        | expected::tail ->
+            [0L..7L]
+            |> Seq.map (fun i -> ((currentBits <<< 3) ||| i)) // append the 3 bits of the combination to the current bits
+            |> Seq.filter (fun nextBits -> (apply nextBits = expected)) // run the resulting bits in the program, keeps the ones that match
+            |> Seq.iter (fun nextBits -> findBits nextBits tail) // and continue on with the rest
+
+    // Start with 0 as the initial bits and the list of integers of the program reversed as the expectation
+    findBits 0 expectedList
+    best
+
 solve2 "Day17.txt"
 
 // Unit tests
@@ -124,3 +136,34 @@ let actual4 = run { regA = 0; regB = 29; regC = 0; program = [|1;7|]; ip = 0; ou
 Check.That(actual4.regB).Equals(26)
 let actual5 = run { regA = 0; regB = 2024; regC = 43690; program = [|4;0|]; ip = 0; output = [] }
 Check.That(actual5.regB).Equals(44354)
+
+// Attempts below are specific to my input
+
+// Find out the result of a single loop, basically applying the operations in the program up until the jump
+// Here it's hardcoded but I suspect the initial simulator version would be enough and able to handle all inputs
+let inline applyProgram a =
+    let mutable b = a % 8L            // bst 4 - on A keep lowest 3 bits     , put in B
+    b <- b ^^^ 1L                     // bxl 1 - on B flip bit 1             , put in B, odd / even thing ?
+    let c = a / (1L <<< (b |> int))   // cdv 5 - on A remove last B bits     , put in C
+    b <- b ^^^ 5L                     // bxl 5 - on B flip bits 1 and 3      , put in B
+    b <- b ^^^ c                      // bxc 5 - on B flip C bits            , put in B
+    b % 8L
+
+// Second attempt, decode the instructions and translate to F#
+// Faster but specific to the input I got
+let singleRun inputA =
+    let mutable a = inputA
+    let mutable b = 0
+    let mutable c = 0
+    let output = new System.Collections.Generic.List<int>()
+    while (a <> 0) do
+        b <- a % 8
+        b <- b ^^^ 1
+        c <- a / (1 <<< b)
+        b <- b ^^^ 5
+        b <- b ^^^ c
+        a <- a / (1 <<< 3)
+        output.Add(b % 8)
+    System.String.Join(',', output |> Seq.toArray)
+    
+Check.That(singleRun 30344604).Equals("4,3,2,6,4,5,3,2,4")
