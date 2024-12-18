@@ -50,13 +50,13 @@ let solve2d input part1nanoseconds =
 
     let rec bs segmentStart segmentEnd =
         if segmentStart = segmentEnd then
-            fallingBlocks[segmentEnd]
+            fallingBlocks[segmentStart-1]
         else
             let mid = segmentStart + (segmentEnd - segmentStart) / 2
             let mutable fallenBlocks = new HashSet<int*int>(fallingBlocks |> Array.take mid)
             match tryFindPath height width fallenBlocks with
             | Some _ -> bs (mid + 1) segmentEnd // Path found, start at mid + 1
-            | _ -> bs segmentStart (mid - 1) // Path not found, end at mid - 1
+            | _ -> bs segmentStart mid // Path not found, end at mid
   
     let (br,bc) = bs part1nanoseconds ((fallingBlocks |> Array.length) - 1)
     sprintf "%i,%i" br bc
