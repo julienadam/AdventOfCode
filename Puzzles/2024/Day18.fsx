@@ -5,11 +5,10 @@
 #load "../../Tools/Distance.fs"
 #r "nuget: NFluent"
 
-open System
 open System.IO
+open System.Collections.Generic
 open AdventOfCode
 open Checked
-open Array2DTools
 open FullAStar
 open NFluent
 
@@ -17,12 +16,10 @@ let getInput name =
     File.ReadAllLines(getInputPath2024 name)
     |> Seq.map (splitIntList >> tupleize2)
 
-let cost a b = 1.0
-let getNeighbors (blockMap:Set<int*int>) (height,width) (r,c) = 
+let cost _ _ = 1.0
+let getNeighbors (blockMap:HashSet<int*int>) (height,width) (r,c) = 
     Array2DTools.getAdjacentCoords r c width height
-    |> Seq.filter (fun (r,c) ->
-        blockMap.Contains((r,c)) |> not
-    )
+    |> Seq.filter (fun p -> blockMap.Contains(p) |> not)
 
 let tryFindPath height width fallenBlocks =
     let config :Config<int*int> = {
@@ -37,7 +34,7 @@ let solve1 input nanoseconds =
     let fallingBlocks = getInput input
     let height = (fallingBlocks |> Seq.map fst |> Seq.max) + 1
     let width = (fallingBlocks |> Seq.map snd |> Seq.max) + 1
-    let fallenBlocks = fallingBlocks |> Seq.take nanoseconds |> Set.ofSeq
+    let fallenBlocks = new HashSet<int*int>(fallingBlocks |> Seq.take nanoseconds)
     match tryFindPath height width fallenBlocks with
     | Some path -> (path |> Seq.length) - 1
     | _ -> failwithf "No path found"
@@ -45,23 +42,52 @@ let solve1 input nanoseconds =
 Check.That(solve1 "Day18_sample1.txt" 12).Equals(22)
 solve1 "Day18.txt" 1024
 
-let solve2 input =
+// Part 2 - Second attempt. A* the initial map. This gives us the current best path. 
+// If a block falls anywhere outside the best path, ignore it. 
+// If not, compute the new best past. Rinse and repeat until we are blocked
+// This runs in under a second on my machine compared to about 2 minutes for my first attempt below
+let solve2b input =
     let fallingBlocks = getInput input
     let height = (fallingBlocks |> Seq.map fst |> Seq.max) + 1
     let width = (fallingBlocks |> Seq.map snd |> Seq.max) + 1
 
-    // We can start at min(width, height) blocks which is the bare minimum for blocking the way
-    let mutable fallenBlocks = fallingBlocks |> Seq.take (min height width) |> Set.ofSeq
-    let (br,bc) = 
-        fallingBlocks |> Seq.skip (min height width) |> Seq.find (fun b ->
-            if fallenBlocks.Count % 100 = 0 then printf "."
-            fallenBlocks <- fallenBlocks |> Set.add(b)
-            match tryFindPath height width fallenBlocks with
-            | Some _ -> false
-            | _ -> true
+    let mutable fallenBlocks = new HashSet<int*int>()
+    let mutable bestPathBlocks = (tryFindPath height width fallenBlocks).Value |> Set.ofSeq
+
+    let (br,bc) =
+        fallingBlocks |> Seq.find (fun b ->
+            fallenBlocks.Add(b) |> ignore
+            if bestPathBlocks.Contains b then
+                match tryFindPath height width fallenBlocks with
+                | Some path -> 
+                    bestPathBlocks <- path |> Set.ofSeq
+                    false
+                | _ -> true
+            else
+                false
         )
     sprintf "%i,%i" br bc
 
-Check.That(solve2 "Day18_sample1.txt").Equals("6,1")
+Check.That(solve2b "Day18_sample1.txt").Equals("6,1")
 
-solve2 "Day18.txt"
+solve2b "Day18.txt"
+
+// Part 2 - First attempt, just A* each "nanosecond" with one more block
+//let solve2 input =
+//    let fallingBlocks = getInput input
+//    let height = (fallingBlocks |> Seq.map fst |> Seq.max) + 1
+//    let width = (fallingBlocks |> Seq.map snd |> Seq.max) + 1
+
+//    let mutable fallenBlocks = new HashSet<int*int>()
+//    let (br,bc) = 
+//        fallingBlocks |> Seq.find (fun b ->
+//            if fallenBlocks.Count % 100 = 0 then printf "."
+//            fallenBlocks.Add(b) |> ignore
+//            match tryFindPath height width fallenBlocks with
+//            | Some _ -> false
+//            | _ -> true
+//        )
+//    sprintf "%i,%i" br bc
+
+//Check.That(solve2 "Day18_sample1.txt").Equals("6,1")
+// solve2 "Day18.txt"
