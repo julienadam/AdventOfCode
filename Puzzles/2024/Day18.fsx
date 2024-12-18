@@ -42,30 +42,29 @@ let solve1 input nanoseconds =
 Check.That(solve1 "Day18_sample1.txt" 12).Equals(22)
 solve1 "Day18.txt" 1024
 
-// Part 2 - Third attempt. Start with a full map, remove fallen blocks until a path is found
-let solve2c input =
-    let fallingBlocks = getInput input
+// Part 2 - Fourth attempt. Binary search from 1024 to the end
+let solve2d input part1nanoseconds =
+    let fallingBlocks = getInput input |> Seq.toArray
     let height = (fallingBlocks |> Seq.map fst |> Seq.max) + 1
     let width = (fallingBlocks |> Seq.map snd |> Seq.max) + 1
 
-    let mutable fallenBlocks = new HashSet<int*int>(fallingBlocks)
-    
-    let (br,bc) =
-        fallingBlocks |> Seq.rev |> Seq.find (fun b ->
-            fallenBlocks.Remove(b) |> ignore
+    let rec bs segmentStart segmentEnd =
+        if segmentStart = segmentEnd then
+            fallingBlocks[segmentEnd]
+        else
+            let mid = segmentStart + (segmentEnd - segmentStart) / 2
+            let mutable fallenBlocks = new HashSet<int*int>(fallingBlocks |> Array.take mid)
             match tryFindPath height width fallenBlocks with
-            | Some _ -> 
-                printfn "Found clear path after %i blocks" (fallenBlocks.Count)
-                true
-            | _ ->  false
-            
-        )
+            | Some _ -> bs (mid + 1) segmentEnd // Path found, start at mid + 1
+            | _ -> bs segmentStart (mid - 1) // Path not found, end at mid - 1
+  
+    let (br,bc) = bs part1nanoseconds ((fallingBlocks |> Array.length) - 1)
     sprintf "%i,%i" br bc
 
-Check.That(solve2c "Day18_sample1.txt").Equals("6,1")
-solve2c "Day18.txt" // Takes about 30ms
+Check.That(solve2d "Day18_sample1.txt" 12).Equals("6,1")
+solve2d "Day18.txt" 1024 // Takes about 20ms
 
-// Part 2 - First attempt, just A* each "nanosecond" with one more block
+// Part 2 - First attempt, just A* each "nanosecond" with one more block, very slow but works
 let solve2 input =
     let fallingBlocks = getInput input
     let height = (fallingBlocks |> Seq.map fst |> Seq.max) + 1
@@ -84,7 +83,6 @@ let solve2 input =
 
 Check.That(solve2 "Day18_sample1.txt").Equals("6,1")
 solve2 "Day18.txt" // Takes about a minute or two
-
 
 // Part 2 - Second attempt. A* the initial map. This gives us the current best path. 
 // If a block falls anywhere outside the best path, ignore it. 
@@ -116,3 +114,26 @@ let solve2b input =
 
 Check.That(solve2b "Day18_sample1.txt").Equals("6,1")
 solve2b "Day18.txt" // Takes about a second
+
+// Part 2 - Third attempt. Start with a full map, remove fallen blocks until a path is found
+let solve2c input =
+    let fallingBlocks = getInput input
+    let height = (fallingBlocks |> Seq.map fst |> Seq.max) + 1
+    let width = (fallingBlocks |> Seq.map snd |> Seq.max) + 1
+
+    let mutable fallenBlocks = new HashSet<int*int>(fallingBlocks)
+    
+    let (br,bc) =
+        fallingBlocks |> Seq.rev |> Seq.find (fun b ->
+            fallenBlocks.Remove(b) |> ignore
+            match tryFindPath height width fallenBlocks with
+            | Some _ -> 
+                printfn "Found clear path after %i blocks" (fallenBlocks.Count)
+                true
+            | _ ->  false
+            
+        )
+    sprintf "%i,%i" br bc
+
+Check.That(solve2c "Day18_sample1.txt").Equals("6,1")
+solve2c "Day18.txt" // Takes about 30ms
