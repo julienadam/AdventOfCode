@@ -45,8 +45,23 @@ let solve1 input nanoseconds =
 Check.That(solve1 "Day18_sample1.txt" 12).Equals(22)
 solve1 "Day18.txt" 1024
 
-//let grid = Array2D.create height width '.'
-   //fallingBlocks |> Seq.take nanoseconds |> Seq.iter (fun (r,c) ->
-   //    grid[r,c] <- '#'
-   //)
-   //printGrid grid
+let solve2 input =
+    let fallingBlocks = getInput input
+    let height = (fallingBlocks |> Seq.map fst |> Seq.max) + 1
+    let width = (fallingBlocks |> Seq.map snd |> Seq.max) + 1
+
+    // We can start at min(width, height) blocks which is the bare minimum for blocking the way
+    let mutable fallenBlocks = fallingBlocks |> Seq.take (min height width) |> Set.ofSeq
+    let (br,bc) = 
+        fallingBlocks |> Seq.skip (min height width) |> Seq.find (fun b ->
+            if fallenBlocks.Count % 100 = 0 then printf "."
+            fallenBlocks <- fallenBlocks |> Set.add(b)
+            match tryFindPath height width fallenBlocks with
+            | Some _ -> false
+            | _ -> true
+        )
+    sprintf "%i,%i" br bc
+
+Check.That(solve2 "Day18_sample1.txt").Equals("6,1")
+
+solve2 "Day18.txt"
