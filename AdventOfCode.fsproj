@@ -9,6 +9,8 @@
         <None Include=".gitignore" />
         <None Include="AdventOfCode.sln" />
         <Compile Include="Tools\Dijkstra.fs" />
+        <PackageReference Include="BenchmarkDotNet" Version="0.14.0" />
+        <PackageReference Include="FSharp.Collections.ParallelSeq" Version="1.2.0" />
         <PackageReference Include="OptimizedPriorityQueue" Version="5.1.0" />
         <Compile Include="Tools\Array2DTools.fs" />
         <Compile Include="Tools\AStar.fs" />
