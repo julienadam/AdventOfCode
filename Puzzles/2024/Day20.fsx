@@ -19,14 +19,21 @@ let solveDij maxPicoSecondsAllowed input cutOff =
     let getNeighbors (r,c) = grid |> Array2DTools.getAdjacent r c |> Seq.filter (fun (_,_,v) -> v <> '#') |> Seq.map (fun (r,c,_) -> (r,c)) |> Seq.toList
 
     let distMatrix = Dijkstra.getDistMatrix (er,ec) vertices getNeighbors (fun a b -> 1.0f)
+    let sortedByDist = distMatrix |> Seq.map (fun kvp -> kvp.Key, kvp.Value) |> Seq.sortBy snd |> Seq.toList
 
-    let matrix = distMatrix |> Seq.map (fun kvp -> kvp.Key, kvp.Value) |> Seq.toList
-    Seq.allPairs matrix matrix 
-    |> Seq.filter (fun ((a,d1), (b,d2)) -> 
-        let md = (manhattanDistPoints a b |> float32)
-        d2 - d1 - md >= cutOff && md <= maxPicoSecondsAllowed)
-    |> Seq.length
+    let rec count dists found =
+        match dists with
+        | [] -> found
+        | (a,d1)::tail ->
+            let foundHere = 
+                tail
+                |> Seq.filter (fun (b,d2) ->
+                    let md = (manhattanDistPoints a b |> float32)
+                    d2 - d1 - md >= cutOff && md <= maxPicoSecondsAllowed)
+                |> Seq.length
+            count tail (foundHere + found)
 
+    count sortedByDist 0
 
 let solve1 = solveDij 2f
 // solve1 "Day20_sample1.txt" 12f
