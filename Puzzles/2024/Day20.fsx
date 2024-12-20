@@ -36,8 +36,8 @@ let solve cheatDuration input minCheat =
     let cheats = ref 0
 
     path |> PSeq.iteri (fun index a ->
-        // Find shortcuts (they are at least more than minCheat cells away)
-        for cheatTo = index + minCheat to path.Count - 1 do 
+        // Cheats are at least more than minCheat + 2 steps (minimum added cheat distance) away
+        for cheatTo = index + minCheat + 2 to path.Count - 1 do 
             let b = path[cheatTo]
             let md = manhattanDistPoints a b
             if cheatTo - index - md >= minCheat && md <= cheatDuration then
