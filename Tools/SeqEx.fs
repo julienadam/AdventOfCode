@@ -37,3 +37,27 @@ module SeqEx =
         | k, (x::xs) -> List.map ((@) [x]) (comb (k-1) xs) @ comb k xs
 
     let inline product64 (numbers : int64 seq) = numbers |> Seq.fold (fun a b -> a * b) 1L
+
+    type ListBuilder() =
+      let concatMap f m = List.concat( List.map (fun x -> f x) m )
+      member this.Bind (m, f) = concatMap (fun x -> f x) m 
+      member this.Return (x) = [x]
+      member this.ReturnFrom (x) = x
+      member this.Zero () = []
+      member this.Combine (a,b) = a@b
+      member this.Delay f = f ()
+    
+    let list = ListBuilder()
+
+    let rec permutations n lst = 
+      let rec selections = function
+          | []      -> []
+          | x::xs -> (x,xs) :: list { let! y,ys = selections xs 
+                                      return y,x::ys }
+      (n, lst) |> function
+      | 0, _ -> [[]]
+      | _, [] -> []
+      | _, x::[] -> [[x]]
+      | n, xs -> list { let! y,ys = selections xs
+                        let! zs = permutations (n-1) ys 
+                        return y::zs }
