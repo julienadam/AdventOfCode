@@ -81,6 +81,58 @@ let allDirPadPaths a b =
     else
         result
 
+let vacuumToNumPad (input:string) =
+    let rec vacuumToNumPadRec prev code commands =
+        match code with
+        | [] -> commands
+        | key::tail ->
+            commands 
+            |> List.collect(fun cmd ->
+                let allPaths = allNumPadPaths prev key |> List.map (fun charList -> cmd + new String(charList |> List.toArray) + "A")
+                vacuumToNumPadRec key tail allPaths
+            )
+
+    vacuumToNumPadRec 'A' ((input.ToCharArray()) |> Array.toList) [""]
+
+// memoize this ?
+let dirPadToDirPad (input:string) =
+    let rec dirPadToDirPadRec prev code commands =
+        match code with
+        | [] -> commands
+        | key::tail ->
+            commands 
+            |> Seq.collect(fun cmd ->
+                let allPaths = allDirPadPaths prev key |> Seq.map (fun charList -> cmd + new String(charList |> List.toArray) + "A")
+                dirPadToDirPadRec key tail allPaths
+            )
+
+    let allPaths = dirPadToDirPadRec 'A' ((input.ToCharArray()) |> Array.toList) [""]
+    let sorted = allPaths |> Seq.sortBy (fun s -> s.Length)
+    let bestLength = (sorted |> Seq.head).Length
+    sorted |> Seq.takeWhile (fun s -> s.Length = bestLength)
+
+let orderedPaths = 
+    vacuumToNumPad "029A"
+    |> Seq.collect dirPadToDirPad
+    |> Seq.collect dirPadToDirPad
+    |> Seq.collect dirPadToDirPad
+    |> Seq.head
+
+
+
+let mapNumPadToDirPad code = 
+    ("A" + code) // Insert an extra A to account for the move from A to the first code letter
+    |> Seq.pairwise 
+    |> Seq.map (fun (a, b) -> 
+        allNumPadPaths a b 
+        |> List.map (fun charList -> sprintf "%s%c" (new String(charList |> List.toArray)) 'A')
+    )
+    |> Seq.toList
+
+mapNumPadToDirPad "029A"
+
+(*
+
 let mapNumPadToDirPad code = 
     ("A" + code) // Insert an extra A to account for the move from A to the first code letter
     |> Seq.pairwise 
@@ -103,7 +155,7 @@ let mapDirPadToDirPad (dirPadCommands:string) =
         b, allPathsTob)
     |> Seq.toList
 
-let filterBestSequences (c,(dirPadSequences:string list)) =
+let rec filterBestSequences (c,(dirPadSequences:string list)) =
     let sorted = 
         dirPadSequences
         |> List.map mapDirPadToDirPad
@@ -113,7 +165,12 @@ let filterBestSequences (c,(dirPadSequences:string list)) =
     // Compute the best path length
     let bestPathLength = sorted.Head |> snd
     printfn "best path for %c %i" c bestPathLength
-    c, sorted |> List.takeWhile (fun (_, score) -> score = bestPathLength) |> List.map fst
+    let bestSequences = 
+        sorted 
+        |> List.takeWhile (fun (_, score) -> score = bestPathLength) 
+        |> List.map fst
+        // |> List.map (fun x -> x |> List.map (fun y -> filterBestSequences y))
+    c, bestSequences
 
 let getBestDepressurizedRobotInputs (inputs:(char * string list) list) =  inputs |> List.map filterBestSequences
 
