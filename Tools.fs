@@ -16,6 +16,10 @@ module Tools =
         let fileName = sprintf "%s%s.txt" (Path.GetFileNameWithoutExtension(sourceFile)) qualifier
         Path.Combine(__SOURCE_DIRECTORY__, "Input", year, fileName)
 
+    let DumpMsg msg obj =
+        printfn "%s %A" msg obj
+        obj
+
     let Dump obj =
         printfn "%A" obj
         obj

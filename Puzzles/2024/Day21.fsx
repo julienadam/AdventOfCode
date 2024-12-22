@@ -9,14 +9,6 @@ open AdventOfCode
 open Array2DTools
 open Checked
 
-let getInput name = File.ReadAllLines(getInputPath2024 name)
-
-let solve1 input = 
-    
-    getInput input |> Dump
-
-solve1 "Day21_sample1.txt"
-
 let manhattanPath (ra,ca) (rb,cb) = seq {
     if rb > ra then
         for _ = ra + 1 to rb do yield 'v'
@@ -81,6 +73,10 @@ let allDirPadPaths a b =
     else
         result
 
+let keepShortest (strings: string list) =
+    let minLength = (strings |> List.minBy (fun s -> s.Length)).Length
+    strings |> List.filter(fun s -> s.Length = minLength)
+
 let vacuumToNumPad (input:string) =
     let rec vacuumToNumPadRec prev code commands =
         match code with
@@ -88,35 +84,83 @@ let vacuumToNumPad (input:string) =
         | key::tail ->
             commands 
             |> List.collect(fun cmd ->
-                let allPaths = allNumPadPaths prev key |> List.map (fun charList -> cmd + new String(charList |> List.toArray) + "A")
+                let allPaths = 
+                    allNumPadPaths prev key 
+                    |> List.map (fun charList -> cmd + new String(charList |> List.toArray) + "A")
                 vacuumToNumPadRec key tail allPaths
             )
 
     vacuumToNumPadRec 'A' ((input.ToCharArray()) |> Array.toList) [""]
 
+//vacuumToNumPad "029A" |> Seq.map (fun s -> s.Length)
+
+open System.Collections.Generic
+
+let memoDir = new Dictionary<char*char, char list list>()
+
 // memoize this ?
 let dirPadToDirPad (input:string) =
-    let rec dirPadToDirPadRec prev code commands =
+    let mutable bestLength = Int32.MaxValue
+    let paths = new List<string>()
+
+    let rec dirPadToDirPadRec prev code (command:string) =
         match code with
-        | [] -> commands
+        | [] -> 
+            if command.Length < bestLength then
+                bestLength <- command.Length
+                paths.Add(command)
+            else
+                ()
         | key::tail ->
-            commands 
-            |> Seq.collect(fun cmd ->
-                let allPaths = allDirPadPaths prev key |> Seq.map (fun charList -> cmd + new String(charList |> List.toArray) + "A")
-                dirPadToDirPadRec key tail allPaths
-            )
+            let paths = 
+                match memoDir.TryGetValue((prev, key)) with
+                | true, p -> p
+                | false, _ -> 
+                    let p = allDirPadPaths prev key 
+                    memoDir.Add((prev, key), p)
+                    p
 
-    let allPaths = dirPadToDirPadRec 'A' ((input.ToCharArray()) |> Array.toList) [""]
-    let sorted = allPaths |> Seq.sortBy (fun s -> s.Length)
-    let bestLength = (sorted |> Seq.head).Length
-    sorted |> Seq.takeWhile (fun s -> s.Length = bestLength)
+            let allPaths = 
+                paths
+                |> List.map (fun charList -> command + new String(charList |> List.toArray) + "A")
+            for p in allPaths do
+                dirPadToDirPadRec key tail p
 
-let orderedPaths = 
+    dirPadToDirPadRec 'A' ((input.ToCharArray()) |> Array.toList) ""
+    paths |> Seq.filter (fun p -> p.Length = bestLength)
+
+let p1 = 
     vacuumToNumPad "029A"
-    |> Seq.collect dirPadToDirPad
-    |> Seq.collect dirPadToDirPad
-    |> Seq.collect dirPadToDirPad
-    |> Seq.head
+    |> Seq.collect dirPadToDirPad |> Seq.toList |> keepShortest
+    |> Seq.collect dirPadToDirPad |> Seq.toList |> keepShortest
+    |> Seq.collect dirPadToDirPad |> Seq.toList |> keepShortest
+
+
+//|> Seq.collect dirPadToDirPad
+//|> Seq.collect dirPadToDirPad
+//|> Seq.toArray
+
+//let p2 = p1 |> Array.sortBy (fun s -> s.Length)
+
+//p2 |> Array.map (fun s -> s.Length)
+//(p2 |> Array.last).Length
+
+//let orderedPaths = 
+//    vacuumToNumPad "029A"
+//    |> Seq.collect dirPadToDirPad
+//    |> Seq.collect dirPadToDirPad |> Seq.length |> Dump
+//    |> Seq.collect dirPadToDirPad
+//    |> Seq.head
+
+
+
+
+let getInput name = File.ReadAllLines(getInputPath2024 name)
+
+let solve1 input = 
+    getInput input |> Dump
+
+solve1 "Day21_sample1.txt"
 
 
 
