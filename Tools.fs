@@ -65,7 +65,9 @@ module Tools =
     let inline tupleize2 (a:array<'a>) = a.[0], a.[1]
 
     let inline tupleize3 (a:array<'a>) = a.[0], a.[1], a.[2]
-
+    
+    let inline tupleize4 (a:array<'a>) = a.[0], a.[1], a.[2], a.[3]
+    
     let inline trim (str:string) = str.Trim()
 
     let inline pow2 power = 1 <<< power
