@@ -54,43 +54,68 @@ let enumPseudoRandom seed quantity = seq {
 
 let inline getPrice x = x % 10L
 
-let mapBestDeals secret =
-    enumPseudoRandom secret 2000 
-    |> Seq.map getPrice
-    |> Seq.pairwise
-    |> Seq.map (fun (a,b) -> b, b - a)
-    |> Seq.windowed 4
-    |> Seq.map (fun window -> 
-        window |> Array.map snd |> tupleize4, window |> Array.last |> fst
-    )
+// Debug mode, use the ints themselves as the hash
+//type Hash = (int64*int64*int64*int64)
+//let hash i1 i2 i3 i4 = (i1,i2,i3,i4)
+//let hashNext (i1,i2,i3,i4) i = (i2,i3,i4, i)
 
-getInput "Day22.txt" 
-|> Seq.sumBy(fun s -> (mapBestDeals s |> Seq.length))
+type Hash = int64
+// build a hashcode from the price changes
+// a price change is -9 to +9 so 5 bits for a total of 20 bits
+// it is a very bad hashcode, but very convenient in our case
+let inline hash i1 i2 i3 i4 =
+    ((i1 + 10L) <<< 15) ||| ((i2 + 10L) <<< 10) ||| ((i3 + 10L) <<< 5) ||| (i4 + 10L)
+
+// compute the next hash from the previous one
+// mask the last 15 bits, shift left and OR the next bits
+let mask = 0b111111111111111L
+let inline hashNext prevHash i = (prevHash &&& mask) <<< 5 ||| (i + 10L)
+
+let mapBestDeals secret = seq {
+    let visited = new HashSet<Hash>()
+    let workingSet = 
+        enumPseudoRandom secret 2000 
+        |> Seq.map getPrice
+        |> Seq.pairwise
+        |> Seq.map (fun (a,b) -> b, b - a)
+        |> Seq.toArray
+
+    // initial hash from the first 4 price changes
+    let idx = 3
+    let _, i1 = workingSet[idx-3]
+    let _, i2 = workingSet[idx-2]
+    let _, i3 = workingSet[idx-1]
+    let price, i4 = workingSet[idx]
+    let mutable h = hash i1 i2 i3 i4
+    yield h, price
+    visited.Add(h) |> ignore
+    // then iterate and build hashes from the previous one
+    for idx = 4 to workingSet.Length - 1 do
+        let p, i = workingSet[idx]
+        h <- hashNext h i
+        if visited.Contains(h) |> not then
+            yield h, p
+            visited.Add(h) |> ignore
+}
+
+#r "nuget: FSharp.Collections.ParallelSeq"
+
+open FSharp.Collections.ParallelSeq
+open System.Collections.Concurrent
 
 let solve2 input =
     let buyers = getInput input
-    let deals = new Dictionary<int64*int64*int64*int64, int64>()
-    for b in buyers do
-        let visited = new HashSet<int64*int64*int64*int64>()
-        // printfn "Adding prices from buyer %i" b
+    let deals = new ConcurrentDictionary<Hash, int64>()
+    buyers |> PSeq.iter(fun b ->
         for (changes, score) in mapBestDeals b do
-            if visited.Contains(changes) then
-                ()
-            else
-                visited.Add(changes) |> ignore
-                match deals.TryGetValue(changes) with
-                | true, c ->
-                    deals[changes] <- c + score
-                | false, _ -> 
-                    deals[changes] <- score
+            deals.AddOrUpdate(changes, score, (fun _ v -> v + score)) |> ignore
+    )
 
     let bestDeal = 
         deals 
         |> Seq.maxBy (fun kvp -> kvp.Value)
 
-    bestDeal
+    bestDeal.Value
 
-solve2 "Day22_sample2.txt"
+// solve2 "Day22_sample2.txt"
 solve2 "Day22.txt"
-
-// scoreChanges |> Map.find [|-9L;0L;3L;2L|]
