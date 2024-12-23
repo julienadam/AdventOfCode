@@ -5,37 +5,18 @@ open System
 open System.IO
 open AdventOfCode
 open Checked
-#r "nuget: Quikgraph"
-open QuikGraph
 
 let getInput name = 
     File.ReadAllLines(getInputPath2024 name)
     |> Seq.map (ssplit "-")
-
-let findTriangles (g:BidirectionalGraph<string, UndirectedEdge<string>>) = seq {
-    for e in g.Edges |> Seq.filter (fun e -> e.Source[0] = 't' || e.Target[0] = 't') do
-        let u = e.Source
-        let v = e.Target
-        for w in g.Vertices do
-            if g.Edges |> Seq.exists (fun e -> (e.Source = min v w && e.Target = max v w))
-                && g.Edges |> Seq.exists (fun e -> (e.Source = min w u && e.Target = max w u)) then
-                [u;v;w] |> List.sort
-    }
-
-let solve1 input =
-    let g = new QuikGraph.BidirectionalGraph<string, UndirectedEdge<string>>()
-    let pairs = getInput input
-    for [|a;b|] in pairs do 
-        g.AddVertex(a) |> ignore
-        g.AddVertex(b) |> ignore
-        g.AddEdge(new UndirectedEdge<string>(min a b, max a b)) |> ignore
     
-    findTriangles g |> Seq.distinct |> Seq.length
-
-solve1 "Day23_sample1.txt"
-solve1 "Day23.txt"
-
 open System.Collections.Generic;
+
+let buildEdgeSet (edges:('a*'a) seq) =
+    edges 
+    |> Seq.collect (fun (a,b) -> [(a,b); (b,a)])
+    |> Seq.filter (fun (a,b) -> a <> b)
+    |> Set.ofSeq
 
 let buildEdgeDict (edges:('a*'a) seq) =
     edges 
@@ -47,6 +28,24 @@ let buildEdgeDict (edges:('a*'a) seq) =
     |> Map.ofSeq
 
 let neighbors v (edges:Map<'a,'a array>) = edges[v] |> Set.ofArray
+
+let findTriangles (edges:(string*string) seq) = seq {
+    let edgeSet = buildEdgeSet edges
+    let vertices = edges |> Seq.collect (fun (a,b) -> [a;b]) |> Seq.distinct |> Seq.toList
+    for (u,v) in edgeSet |> Seq.filter (fun (u,v) -> u[0] = 't' || v[0] = 't')do
+        for w in vertices do
+            if (edgeSet.Contains(v,w) || edgeSet.Contains(w,v)) && (edgeSet.Contains(w,u) || edgeSet.Contains(u,w)) then
+                [u;v;w] |> List.sort
+    }
+
+let solve1 input =
+    let pairs = getInput input
+    let edges = pairs |> Seq.map tupleize2
+    findTriangles edges |> Seq.distinct |> Seq.length
+
+solve1 "Day23_sample1.txt"
+solve1 "Day23.txt"
+
 
 // https://fr.wikipedia.org/wiki/Algorithme_de_Bron-Kerbosch
 let BronKerbosh (vertices:'a Set) (edges:Map<'a,'a array>)=
