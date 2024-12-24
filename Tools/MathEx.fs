@@ -2,6 +2,13 @@ namespace AdventOfCode
 
 module MathEx =
     
+    let rec fact (x:bigint) =
+        if x = (1 |> bigint) then (1 |> bigint)
+        else 
+            x * fact (x-(1 |> bigint))
+
+    let numCombinations n k = fact(n)/(fact(k)*fact(n-k))
+
     let rec gcd x y = if y = 0 then abs x else gcd y (x % y)
     let lcm x y = x * y / (gcd x y)
 
