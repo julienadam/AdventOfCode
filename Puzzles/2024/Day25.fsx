@@ -38,5 +38,5 @@ let solve1 input =
     )
     |> Seq.length
 
-solve1 "Day25_sample1.txt"
+// solve1 "Day25_sample1.txt"
 solve1 "Day25.txt"
