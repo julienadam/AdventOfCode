@@ -10,19 +10,26 @@ let day =
     else
         now.Day
 
+let year = 
+    if args.Length > 1 then
+        args[1] |> int
+    else
+        now.Year
+        
+
 let createIfMissing path contents =
     printfn "%s" path
     if File.Exists(path) = false then
         File.WriteAllText(path, contents)
 
 let getCookie () =
-    let path = Path.Combine(__SOURCE_DIRECTORY__, "Input", (now.Year.ToString()), "session.cookie")
+    let path = Path.Combine(__SOURCE_DIRECTORY__, "Input", (year.ToString()), "session.cookie")
     if File.Exists(path) = false then
         failwithf "No session cookie found at %s" path
     File.ReadAllText(path)
 
 let downloadPuzzleInput () =
-    let puzzleUrl = sprintf "https://adventofcode.com/%i/day/%i/input" now.Year day
+    let puzzleUrl = sprintf "https://adventofcode.com/%i/day/%i/input" year day
     let client = new HttpClient()
     let message = new HttpRequestMessage(HttpMethod.Get, Uri(puzzleUrl))
     message.Headers.Add("Cookie", sprintf "session=%s" (getCookie ()))
@@ -34,7 +41,7 @@ let downloadPuzzleInput () =
         printfn "Could not read puzzle from AoC url %s" puzzleUrl
         ""
 
-let fsxPath = Path.Combine(__SOURCE_DIRECTORY__, "Puzzles", (now.Year.ToString()), sprintf "Day%02i.fsx" day)
+let fsxPath = Path.Combine(__SOURCE_DIRECTORY__, "Puzzles", (year.ToString()), sprintf "Day%02i.fsx" day)
 
 let fsxContents = 
     sprintf 
@@ -53,10 +60,10 @@ let solve1 input =
 
 solve1 "Day%02i_sample1.txt"
 """ 
-        now.Year day
+        year day
 
 createIfMissing fsxPath fsxContents
 
-let inputPath = Path.Combine(__SOURCE_DIRECTORY__, "Input", (now.Year.ToString()), sprintf "Day%02i.txt" day)
+let inputPath = Path.Combine(__SOURCE_DIRECTORY__, "Input", (year.ToString()), sprintf "Day%02i.txt" day)
 
 createIfMissing inputPath (downloadPuzzleInput())
