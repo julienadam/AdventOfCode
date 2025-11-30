@@ -15,18 +15,18 @@ type HorizontalSegment = int * Range
 
 type Segment = | Vertical of VerticalSegment | Horizontal of HorizontalSegment
 
-let instrToSegments (instrs:string array) =
-    let allSegs, _ =
-        instrs |> Seq.fold (fun (segments:Segment list, (r,c)) instr ->
-        let steps = instr.Substring(1) |> int
-        match instr[0] with
+let instrToSegments (instructions:string array) =
+    let allSegments, _ =
+        instructions |> Seq.fold (fun (segments:Segment list, (r,c)) instruction ->
+        let steps = instruction.Substring(1) |> int
+        match instruction[0] with
         | 'U' -> (((r - steps, r), c) |> Vertical)::segments, (r - steps, c)
         | 'D' -> (((r, r + steps), c) |> Vertical)::segments, (r + steps, c)
         | 'R' -> ((r, (c, c + steps)) |> Horizontal)::segments, (r, c + steps)
         | 'L' -> ((r, (c - steps, c)) |> Horizontal)::segments, (r, c - steps)
         | x -> failwithf $"not a valid direction {x}"
         ) ([], (0,0))
-    allSegs
+    allSegments
 
 let getInput name =
     File.ReadAllLines(getInputPath2019 name)
