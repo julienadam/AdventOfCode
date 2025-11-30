@@ -32,7 +32,7 @@ module SparseGrid =
     let printGrid dataToChar (grid:IDictionary<int*int, 'a>)=
         for r = (minR grid) to (maxR grid) do
             for c = (minC grid) to (maxC grid) do
-                printf "%c" (dataToChar (grid |> tryGet (r,c)))
+                printf $"%c{dataToChar (grid |> tryGet (r,c))}"
             printfn ""
         grid
     

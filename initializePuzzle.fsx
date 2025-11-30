@@ -17,35 +17,34 @@ let year =
         now.Year
         
 
-let createIfMissing path contents =
-    printfn "%s" path
+let createIfMissing path (contents:string) =
+    printfn $"%s{path}"
     if File.Exists(path) = false then
         File.WriteAllText(path, contents)
 
 let getCookie () =
-    let path = Path.Combine(__SOURCE_DIRECTORY__, "Input", (year.ToString()), "session.cookie")
+    let path = Path.Combine(__SOURCE_DIRECTORY__, "Input", year.ToString(), "session.cookie")
     if File.Exists(path) = false then
-        failwithf "No session cookie found at %s" path
+        failwithf $"No session cookie found at %s{path}"
     File.ReadAllText(path)
 
 let downloadPuzzleInput () =
-    let puzzleUrl = sprintf "https://adventofcode.com/%i/day/%i/input" year day
+    let puzzleUrl = $"https://adventofcode.com/%i{year}/day/%i{day}/input"
     let client = new HttpClient()
     let message = new HttpRequestMessage(HttpMethod.Get, Uri(puzzleUrl))
-    message.Headers.Add("Cookie", sprintf "session=%s" (getCookie ()))
+    message.Headers.Add("Cookie", $"session=%s{getCookie ()}")
     let response = client.Send(message);
     match response.IsSuccessStatusCode with
     | true ->
         (new StreamReader(response.Content.ReadAsStream())).ReadToEnd()
     | false ->
-        printfn "Could not read puzzle from AoC url %s" puzzleUrl
+        printfn $"Could not read puzzle from AoC url %s{puzzleUrl}"
         ""
 
-let fsxPath = Path.Combine(__SOURCE_DIRECTORY__, "Puzzles", (year.ToString()), sprintf "Day%02i.fsx" day)
+let fsxPath = Path.Combine(__SOURCE_DIRECTORY__, "Puzzles", year.ToString(), $"Day%02i{day}.fsx")
 
-let fsxContents = 
-    sprintf 
-        """#time "on"
+let fsxContents =
+    $"""#time "on"
 #load "../../Tools.fs"
 
 open System
@@ -53,17 +52,16 @@ open System.IO
 open AdventOfCode
 open Checked
 
-let getInput name = File.ReadAllLines(getInputPath%i name)
+let getInput name = File.ReadAllLines(getInputPath%i{year} name)
 
 let solve1 input =
     getInput input |> Dump
 
-solve1 "Day%02i_sample1.txt"
-""" 
-        year day
+solve1 "Day%02i{day}_sample1.txt"
+"""
 
 createIfMissing fsxPath fsxContents
 
-let inputPath = Path.Combine(__SOURCE_DIRECTORY__, "Input", (year.ToString()), sprintf "Day%02i.txt" day)
+let inputPath = Path.Combine(__SOURCE_DIRECTORY__, "Input", year.ToString(), $"Day%02i{day}.txt")
 
 createIfMissing inputPath (downloadPuzzleInput())

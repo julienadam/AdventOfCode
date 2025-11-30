@@ -7,7 +7,7 @@ open Microsoft.Z3.Bool
 type Real(expr: RealExpr) = 
   inherit Theory()
   override x.Expr = expr :> Expr
-  override x.ToString() = sprintf "%O" expr
+  override x.ToString() = $"{expr}"
   static member FromExpr (e: Expr) = Real(e :?> RealExpr)
 
 let RealExpr expr = Real(expr)

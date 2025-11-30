@@ -8,7 +8,7 @@ open Microsoft.Z3
 type Bool(e: BoolExpr) = 
   inherit Theory()
   override x.Expr = e :> Expr
-  override x.ToString() = sprintf "%O" e
+  override x.ToString() = $"{e}"
   static member FromExpr (e: Expr) = Bool(e :?> BoolExpr)
 
 let BoolExpr expr = Bool(expr)
@@ -91,6 +91,7 @@ let simplify (f: Expr) (options: (string * _) []) =
     | Bool b -> p.Add(k, b)
     | UInt i -> p.Add(k, i)
     | Double f -> p.Add(k, f)
+    |> ignore
   f.Simplify(p)
 
 let internal set_option (options: (string * _) []) =
@@ -98,9 +99,9 @@ let internal set_option (options: (string * _) []) =
   let p = c.MkParams()
   for (k, v) in options do
     match v with
-    | Bool b -> c.UpdateParamValue(k, sprintf "%O" b)
-    | UInt i -> c.UpdateParamValue(k, sprintf "%O" i)
-    | Double f -> c.UpdateParamValue(k, sprintf "%O" f)
+    | Bool b -> c.UpdateParamValue(k, $"{b}")
+    | UInt i -> c.UpdateParamValue(k, $"{i}")
+    | Double f -> c.UpdateParamValue(k, $"{f}")
 
 type Z3 =
   static member Solve ([<ParamArray>] xs: _ []) =
@@ -115,7 +116,7 @@ type Z3 =
       let m = solver.Model
       printfn "["
       solutions
-      |> Seq.map (fun (name, decl, value) -> sprintf " %O = %O" name value)
+      |> Seq.map (fun (name, decl, value) -> $" {name} = {value}")
       |> fun s -> String.Join(",\n", s)
       |> printfn "%s"
       printfn "]"

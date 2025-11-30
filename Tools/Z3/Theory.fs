@@ -51,8 +51,8 @@ type Result =
 with
   override x.ToString() =
     match x with
-    | Const expr -> sprintf "%O" expr
-    | Func f -> sprintf "%O" f
+    | Const expr -> $"{expr}"
+    | Func f -> $"{f}"
 
 /// Multiple indexers for evaluating formulas
 type Microsoft.Z3.Model with
@@ -89,7 +89,7 @@ module Solver =
       Unknown
     | Status.UNSATISFIABLE ->
       NoSolution
-    | x -> failwithf "unknown enum value %O" x
+    | x -> failwithf $"unknown enum value {x}"
 
   let check (solver : Solver) =
     solver.Check () |> wrap_status solver

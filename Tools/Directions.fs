@@ -43,7 +43,7 @@ module Directions =
             | 90 -> East
             | 180 -> South
             | 270 -> West
-            | _ -> failwithf "Invalid degrees for directions, must be a multiple of 90°, was %i" deg
+            | _ -> failwithf $"Invalid degrees for directions, must be a multiple of 90ï¿½, was %i{deg}"
 
     type Compass =
     | Up

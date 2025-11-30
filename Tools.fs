@@ -14,15 +14,15 @@ module Tools =
     let getInputPath2024 file = Path.Combine(__SOURCE_DIRECTORY__, "Input", "2024", file)
     let getInputPathFsx (sourceDir:string) (sourceFile:string) qualifier =
         let year = DirectoryInfo(sourceDir).Name
-        let fileName = sprintf "%s%s.txt" (Path.GetFileNameWithoutExtension(sourceFile)) qualifier
+        let fileName = $"%s{Path.GetFileNameWithoutExtension(sourceFile)}%s{qualifier}.txt"
         Path.Combine(__SOURCE_DIRECTORY__, "Input", year, fileName)
 
     let DumpMsg msg obj =
-        printfn "%s %A" msg obj
+        printfn $"%s{msg} %A{obj}"
         obj
 
     let Dump obj =
-        printfn "%A" obj
+        printfn $"%A{obj}"
         obj
 
     let ssplit (sep:string) (str:string) = str.Split([|sep|], StringSplitOptions.None)
@@ -75,14 +75,14 @@ module Tools =
 
     let inline swap2 (a,b) = (b,a)
 
-    let inline fst3 (a,b,c) = a
-    let inline snd3 (a,b,c) = b
-    let inline thd3 (a,b,c) = c
+    let inline fst3 (a,_,_) = a
+    let inline snd3 (_,b,_) = b
+    let inline thd3 (_,_,c) = c
 
-    let inline fst4 (a,b,c,d) = a
-    let inline snd4 (a,b,c,d) = b
-    let inline thd4 (a,b,c,d) = c
-    let inline fth4 (a,b,c,d) = d
+    let inline fst4 (a,_,_,_) = a
+    let inline snd4 (_,b,_,_) = b
+    let inline thd4 (_,_,c,_) = c
+    let inline fth4 (_,_,_,d) = d
 
     let kvpKey (kvp:KeyValuePair<'a, _>) = kvp.Key
     let kvpValue (kvp:KeyValuePair<_,'a>) = kvp.Value

@@ -113,20 +113,20 @@ module Array2DTools =
     let printGrid (grid:'a[,]) =
         for i in [0..grid.GetLength(0) - 1] do
             for j in [0..grid.GetLength(1) - 1] do
-                printf "%O" grid.[i,j]
+                printf $"{grid.[i,j]}"
             printfn ""
     
     let printGridCustom dataToChar (grid:'a[,]) =
         for i in [0..grid.GetLength(0) - 1] do
             for j in [0..grid.GetLength(1) - 1] do
-                printf "%c" (dataToChar grid.[i,j])
+                printf $"%c{dataToChar grid.[i,j]}"
             printfn ""
         grid
 
     let printGridCustom2 dataToChar (grid:'a[,]) =
         for i in [0..grid.GetLength(0) - 1] do
             for j in [0..grid.GetLength(1) - 1] do
-                printf "%c" (dataToChar grid.[i,j] i j)
+                printf $"%c{dataToChar grid.[i,j] i j}"
             printfn ""
         grid
 

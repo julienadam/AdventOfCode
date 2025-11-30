@@ -9,7 +9,7 @@ open Microsoft.Z3.Bool
 type Int(expr: IntExpr) = 
   inherit Theory()
   override x.Expr = expr :> Expr
-  override x.ToString() = sprintf "%O" expr
+  override x.ToString() = $"{expr}"
   static member FromExpr (e: Expr) = Int(e :?> IntExpr)
 
 let IntExpr expr = Int(expr)
