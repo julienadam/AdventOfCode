@@ -29,10 +29,65 @@
         <Compile Include="Tools\Z3\Real.fs" />
         <None Include="Puzzles\**\*.linq" />
         <None Include="Puzzles\**\*.fsx" />
-        <EmbeddedResource Remove="Input\**" />
         <Compile Include="Tools.fs" />
         <Compile Include="Program.fs" />
         <None Include="initializePuzzle.fsx" />
+        <Content Include="Input\2019\Day03.txt" />
+        <Content Include="Input\2019\Day03_sample3.txt" />
+        <Content Include="Input\2019\Day03_sample2.txt" />
+        <Content Include="Input\2019\Day03_sample1.txt" />
+        <Content Include="Input\2024\session.cookie" />
+        <Content Include="Input\2024\Day21_sample1.txt" />
+        <Content Include="Input\2024\Day21.txt" />
+        <Content Include="Input\2024\Day20_sample1.txt" />
+        <Content Include="Input\2024\Day20.txt" />
+        <Content Include="Input\2024\Day19_sample1.txt" />
+        <Content Include="Input\2024\Day19.txt" />
+        <Content Include="Input\2024\Day18_sample1.txt" />
+        <Content Include="Input\2024\Day18.txt" />
+        <Content Include="Input\2024\Day17_sample2.txt" />
+        <Content Include="Input\2024\Day17_sample1.txt" />
+        <Content Include="Input\2024\Day17.txt" />
+        <Content Include="Input\2024\Day16_sample2.txt" />
+        <Content Include="Input\2024\Day16_sample1.txt" />
+        <Content Include="Input\2024\Day16.txt" />
+        <Content Include="Input\2024\Day15_sample3.txt" />
+        <Content Include="Input\2024\Day15_sample2.txt" />
+        <Content Include="Input\2024\Day15_sample1.txt" />
+        <Content Include="Input\2024\Day15.txt" />
+        <Content Include="Input\2024\Day14_sample1.txt" />
+        <Content Include="Input\2024\Day14.txt" />
+        <Content Include="Input\2024\Day13_sample1.txt" />
+        <Content Include="Input\2024\Day13.txt" />
+        <Content Include="Input\2024\Day12_sample5.txt" />
+        <Content Include="Input\2024\Day12_sample4.txt" />
+        <Content Include="Input\2024\Day12_sample3.txt" />
+        <Content Include="Input\2024\Day12_sample2.txt" />
+        <Content Include="Input\2024\Day12_sample1.txt" />
+        <Content Include="Input\2024\Day12.txt" />
+        <Content Include="Input\2024\Day11_sample2.txt" />
+        <Content Include="Input\2024\Day11_sample1.txt" />
+        <Content Include="Input\2024\Day11.txt" />
+        <Content Include="Input\2024\Day10_sample1.txt" />
+        <Content Include="Input\2024\Day10.txt" />
+        <Content Include="Input\2024\Day09.txt" />
+        <Content Include="Input\2024\Day08_sample1.txt" />
+        <Content Include="Input\2024\Day08.txt" />
+        <Content Include="Input\2024\Day07_sample1.txt" />
+        <Content Include="Input\2024\Day07.txt" />
+        <Content Include="Input\2024\Day06_sample1.txt" />
+        <Content Include="Input\2024\Day06.txt" />
+        <Content Include="Input\2024\Day05_sample1.txt" />
+        <Content Include="Input\2024\Day05.txt" />
+        <Content Include="Input\2024\Day04_Sample1.txt" />
+        <Content Include="Input\2024\Day04.txt" />
+        <Content Include="Input\2024\Day03_sample2.txt" />
+        <Content Include="Input\2024\Day03_sample1.txt" />
+        <Content Include="Input\2024\Day03.txt" />
+        <Content Include="Input\2024\Day02_sample1.txt" />
+        <Content Include="Input\2024\Day02.txt" />
+        <Content Include="Input\2024\Day01_Sample1.txt" />
+        <Content Include="Input\2024\Day01.txt" />
     </ItemGroup>
 
     <ItemGroup>
@@ -42,6 +97,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <Folder Include="Input\2025\" />
       <Folder Include="Puzzles\2025\" />
     </ItemGroup>
 </Project>
