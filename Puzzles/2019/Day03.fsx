@@ -1,0 +1,89 @@
+#time "on"
+#load "../../Tools.fs"
+#load "../../Tools/SeqEx.fs"
+
+open System
+open System.IO
+open AdventOfCode
+open Checked
+
+type Point = int * int
+type Range = int * int
+
+type VerticalSegment = Range * int
+type HorizontalSegment = int * Range
+
+type Segment = | Vertical of VerticalSegment | Horizontal of HorizontalSegment
+
+let instrToSegments (instrs:string array) =
+    let allSegs, _ =
+        instrs |> Seq.fold (fun (segments:Segment list, (r,c)) instr ->
+        let steps = instr.Substring(1) |> int
+        match instr[0] with
+        | 'U' -> (((r - steps, r), c) |> Vertical)::segments, (r - steps, c)
+        | 'D' -> (((r, r + steps), c) |> Vertical)::segments, (r + steps, c)
+        | 'R' -> ((r, (c, c + steps)) |> Horizontal)::segments, (r, c + steps)
+        | 'L' -> ((r, (c - steps, c)) |> Horizontal)::segments, (r, c - steps)
+        | x -> failwithf $"not a valid direction {x}"
+        ) ([], (0,0))
+    allSegs
+
+let getInput name =
+    File.ReadAllLines(getInputPath2019 name)
+    |> Array.map (fun l -> l |> ssplit "," |> instrToSegments)
+    |> tupleize2
+
+let tryIntersectVH ((rmin, rmax),c) (r, (cmin,cmax)) =
+    if r >= rmin && r <= rmax && c >= cmin && c <= cmax then
+        [(r,c)]
+    else
+        []
+
+let tryIntersectHH (r1, (cmin1, cmax1)) (r2, (cmin2, cmax2)) =
+    if r1 <> r2 then
+        []
+    else
+        let m' = max cmin1 cmin2
+        let M' = min cmax1 cmax2
+        if m' <= M' then
+            [m'..M'] |> List.map (fun c -> r1, c)
+        else
+            []
+            
+let tryIntersectVV ((rmin1,rmax1), c1) ((rmin2,rmax2), c2) =
+    if c1 <> c2 then
+        []
+    else
+        let m' = max rmin1 rmin2
+        let M' = min rmax1 rmax2
+        if m' <= M' then
+            [m'..M'] |> List.map (fun r -> r, c1)
+        else
+            []
+        
+// tryIntersectHH (0, (-10, 0)) (0, (-20, -10))
+// tryIntersectVH ((0, 10), 5) (5, (6, 10))
+
+let solve1 input =
+    let wires1, wires2 = getInput input
+    SeqEx.crossproduct wires1 wires2
+    |> Seq.collect (fun (s1, s2) ->
+        match s1, s2 with
+        | Horizontal a, Horizontal b -> tryIntersectHH a b
+        | Vertical a, Vertical b -> tryIntersectVV a b
+        | Horizontal a, Vertical b -> tryIntersectVH b a
+        | Vertical a, Horizontal b -> tryIntersectVH a b
+        )
+    |> Seq.filter (fun (r,c)-> r <> 0 && c <> 0)
+    |> Seq.map (fun (r,c) -> abs r + abs c)
+    |> Seq.min
+
+solve1 "Day03_sample1.txt" // 6
+solve1 "Day03_sample2.txt" // 159
+solve1 "Day03_sample3.txt" // 135
+solve1 "Day03.txt"
+
+let solve2 input =
+    ()
+
+solve2 "Day03.txt"

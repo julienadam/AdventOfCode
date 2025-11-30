@@ -40,4 +40,8 @@
         <PackageReference Include="XPLot.Plotly" Version="4.0.6" />
         <PackageReference Include="Microsoft.Z3" Version="4.12.2" />
     </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Puzzles\2025\" />
+    </ItemGroup>
 </Project>
