@@ -12,6 +12,7 @@ module Tools =
     let getInputPath2022 file = Path.Combine(__SOURCE_DIRECTORY__, "Input", "2022", file)
     let getInputPath2023 file = Path.Combine(__SOURCE_DIRECTORY__, "Input", "2023", file)
     let getInputPath2024 file = Path.Combine(__SOURCE_DIRECTORY__, "Input", "2024", file)
+    let getInputPath2025 file = Path.Combine(__SOURCE_DIRECTORY__, "Input", "2025", file)
     let getInputPathFsx (sourceDir:string) (sourceFile:string) qualifier =
         let year = DirectoryInfo(sourceDir).Name
         let fileName = $"%s{Path.GetFileNameWithoutExtension(sourceFile)}%s{qualifier}.txt"
