@@ -14,26 +14,32 @@ let mapBank bank =
     bank |> Seq.map (fun battery -> ((int battery) - (int '0')) |> int64) |> Seq.toArray
 
 let getInput name =
-    File.ReadAllLines(getInputPath2025 name)
+    File.ReadLines(getInputPath2025 name)
     |> Seq.map mapBank
 
 let findBiggestLeftMostInRange start length (batteries:int64[]) =
     let mutable max = 0L
-    let mutable index = -1
-    for i = start to start + length - 1 do
+    let mutable bestIndex = -1
+    let mutable i = start
+    // early exit when a 9 is found
+    while max <> 9 && i <= start + length - 1 do 
         if batteries[i] > max then
             max <- batteries[i]
-            index <- i
-    index
+            bestIndex <- i
+        i <- i + 1
+    bestIndex
 
 let findBestJoltageV2 length (bank:int64 array) =
     let rec findRec startPos numberLeft (joltage:int64) =
         if numberLeft = 0 then
             joltage
         else
+            // determine the end of the range
             let numCandidates = (bank |> Array.length) - startPos - numberLeft + 1
+            // find the leftmost biggest number in the range
             let indexOfBestBattery = findBiggestLeftMostInRange startPos numCandidates bank
             let bestBattery = bank[indexOfBestBattery]
+            // update the joltage and find the next best number located after the one we just found
             findRec (indexOfBestBattery+1) (numberLeft - 1) (joltage + (pow10 (numberLeft - 1)) * bestBattery)
     findRec 0 length 0
 
