@@ -40,6 +40,10 @@
         <Content Include="Input\2019\Day06_sample1.txt" />
         <Content Include="Input\2019\Day06.txt" />
         <Content Include="Input\2019\Day06_sample2.txt" />
+        <Content Include="Input\2019\Day07.txt" />
+        <Content Include="Input\2019\Day07_sample1.txt" />
+        <Content Include="Input\2019\Day07_sample2.txt" />
+        <Content Include="Input\2019\Day07_sample3.txt" />
         <Content Include="Input\2024\session.cookie" />
         <Content Include="Input\2024\Day21_sample1.txt" />
         <Content Include="Input\2024\Day21.txt" />
