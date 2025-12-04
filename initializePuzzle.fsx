@@ -46,11 +46,13 @@ let fsxPath = Path.Combine(__SOURCE_DIRECTORY__, "Puzzles", year.ToString(), $"D
 let fsxContents =
     $"""#time "on"
 #load "../../Tools.fs"
+#r "nuget: NFluent"
 
 open System
 open System.IO
 open AdventOfCode
 open Checked
+open NFluent
 
 let getInput name = File.ReadAllLines(getInputPath%i{year} name)
 
@@ -63,5 +65,7 @@ solve1 "Day%02i{day}_sample1.txt"
 createIfMissing fsxPath fsxContents
 
 let inputPath = Path.Combine(__SOURCE_DIRECTORY__, "Input", year.ToString(), $"Day%02i{day}.txt")
-
 createIfMissing inputPath (downloadPuzzleInput())
+
+let sample1Path = Path.Combine(__SOURCE_DIRECTORY__, "Input", year.ToString(), $"Day%02i{day}_sample1.txt")
+createIfMissing inputPath ""
