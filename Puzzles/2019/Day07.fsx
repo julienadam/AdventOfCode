@@ -29,7 +29,6 @@ let decodeOpcode code =
 
 type RunResult =
     | Ended of int64 list
-    | WaitingForInput of int * int64 list
     | Output of int*int64
 
 let run (positions: int64 array) (inputs:int64 list) startIndex=
@@ -45,21 +44,20 @@ let run (positions: int64 array) (inputs:int64 list) startIndex=
         
         match opCode with
         | 1L ->
-            let targetIdx = (positions[index + 3])
+            let targetIdx = positions[index + 3]
             let op1 = getParam parameterModes index 1
             let op2 = getParam parameterModes index 2
             positions[targetIdx |> int] <- op1 + op2
             runRec (index + 4) outputs remainingInputs
         | 2L -> 
-            let targetIdx = (positions[index + 3])
+            let targetIdx = positions[index + 3]
             let op1 = getParam parameterModes index 1
             let op2 = getParam parameterModes index 2
             positions[targetIdx |> int] <- op1 * op2
             runRec (index + 4) outputs remainingInputs
         | 3L ->
-            printfn $"Reading next input from %A{remainingInputs}"
             if remainingInputs |> List.isEmpty then
-                WaitingForInput (index, outputs)
+                failwithf "Pas d'input dispo"
             else
                 let targetPos = positions[index+1]
                 positions[targetPos |> int] <- (remainingInputs |> List.head)
@@ -84,14 +82,14 @@ let run (positions: int64 array) (inputs:int64 list) startIndex=
             else
                 runRec (index + 3) outputs remainingInputs
         | 7L -> // less than
-            let targetIdx = (positions[index + 3])
+            let targetIdx = positions[index + 3]
             let op1 = getParam parameterModes index 1
             let op2 = getParam parameterModes index 2
             let value = if op1 < op2 then 1 else 0
             positions[targetIdx |> int] <- value
             runRec (index + 4) outputs remainingInputs
         | 8L -> // equals
-            let targetIdx = (positions[index + 3])
+            let targetIdx = positions[index + 3]
             let op1 = getParam parameterModes index 1
             let op2 = getParam parameterModes index 2
             let value = if op1 = op2 then 1 else 0
@@ -111,8 +109,8 @@ let solve1 input =
         for setting in phasingSequence do
             let copy = acs |> Array.copy
             match run copy [setting;inputSignal] 0 with
-            | Ended outputs -> inputSignal <- outputs.Head
-            | _ -> failwithf "Should not wait for input"
+            | Ended _ -> ()
+            | Output (_, output) -> inputSignal <- output 
         inputSignal
             
     SeqEx.permutations 5 [0L;1L;2L;3L;4L]
@@ -129,38 +127,27 @@ solve1 "Day07.txt"
 let solve2 input =
     let acs = input |> getInput
     
-    // 5 threads each thread represents an amp and keeps its state
-    // it runs the program until it ends
-    // if it needs an input, it waits for it
-    
     let amplify amps =
         let mutable inputSignal = 0L
         let mutable ended = false
         let mutable loop = 0
-        let states = [|1..5|] |> Array.map (fun i -> acs |> Array.copy, 0)
-        printfn $"Trying combination: %A{amps}"
+        let states = [|1..5|] |> Array.map (fun _ -> acs |> Array.copy, 0)
         while not ended do
-            printfn $"Starting loop {loop}. Current thruster signal {inputSignal}"
-            loop <- loop + 1
             for i, setting in amps |> Seq.indexed do
-                printfn $"Amp {i}. running with setting {setting}. Input signal {inputSignal}"
                 let positions, index = states[i]
                 let inputs = if loop = 0 then [setting; inputSignal] else [inputSignal] 
                 match run positions inputs index with
-                | WaitingForInput (pos, outputs) ->
+                | Output (pos, output) ->
                     Array.set states i (positions, pos)
-                    printfn $"Amp {i}. Waiting for next input at pos {pos}"
-                    inputSignal <- outputs.Head
-                | Ended outputs ->
-                    printfn $"Amp {i} done"
-                    inputSignal <- outputs.Head
+                    inputSignal <- output
+                | Ended _ ->
                     ended <- true
+            loop <- loop + 1
         inputSignal
             
-    amplify [9;8;7;6;5] |> Dump
-    // SeqEx.permutations 5 [5L;6;7;8;9]
-    // |> Seq.map amplify
-    // |> Seq.max
+    SeqEx.permutations 5 [5L;6;7;8;9]
+    |> Seq.map amplify
+    |> Seq.max
     
 Check.That(solve2 "Day07_sample4.txt").IsEqualTo(139629729)
 Check.That(solve2 "Day07_sample5.txt").IsEqualTo(18216)
