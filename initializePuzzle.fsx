@@ -68,4 +68,4 @@ let inputPath = Path.Combine(__SOURCE_DIRECTORY__, "Input", year.ToString(), $"D
 createIfMissing inputPath (downloadPuzzleInput())
 
 let sample1Path = Path.Combine(__SOURCE_DIRECTORY__, "Input", year.ToString(), $"Day%02i{day}_sample1.txt")
-createIfMissing inputPath ""
+createIfMissing sample1Path ""
