@@ -5,6 +5,7 @@
 #r "nuget: NFluent"
 
 open System
+open System.Diagnostics
 open System.IO
 open AdventOfCode
 open Checked
@@ -17,20 +18,6 @@ let getInput name =
     |> Seq.toArray
 
 type JunctionBox = int64*int64*int64
-type CircuitId = int
-
-let connectCircuits junctionBoxes numberOfConnectionsToMake =
-    // List of sets ? one set per circuit
-    // iter on all boxes
-    // find 2 closest with d > previousD
-    // if no set / no set, create new set put both inside
-    // if set1 / no set, add B to set1
-    // if set1 / set2, merge set1 and set 2
-        
-    let rec connect (circuits:Map<JunctionBox, Option<CircuitId>>) (remainingConnections:int) =
-        
-        ()
-    connect (Map.empty) numberOfConnectionsToMake
 
 let solve1 numBoxes input =
     let boxes = getInput input
@@ -41,12 +28,10 @@ let solve1 numBoxes input =
         |> Seq.map (fun (a,b) -> (a,b), Distance.euclidianDistance3D a b)
         |> Seq.sortBy snd
         |> Seq.take numBoxes
-        // |> Seq.toArray |> Dump
     
     let mutable circuits : List<System.Collections.Generic.HashSet<JunctionBox>> = List.Empty
     closestBoxes
     |> Seq.iter (fun ((ja,jb), _) ->
-        printfn $"Next closest : {ja} and {jb}"
         match circuits |> List.tryFind (fun c -> c.Contains(ja)), circuits |> List.tryFind (fun c -> c.Contains(jb)) with
         | Some s, None -> s.Add(jb) |> ignore
         | None, Some s -> s.Add(ja) |> ignore
@@ -61,8 +46,8 @@ let solve1 numBoxes input =
                 circuits <- (circuits |> List.filter (fun x -> x <> sB))
             else
                 ()
-        // circuits |> List.map (fun s -> s |> Seq.toArray) |> Dump |> ignore
         )
+    
     let bestCircuits =
         circuits
         |> List.sortByDescending (fun s -> s.Count)
@@ -73,5 +58,51 @@ let solve1 numBoxes input =
     bestCircuits[0] * bestCircuits[1] * bestCircuits[2] 
     
     
-solve1 10 "Day08_sample1.txt"
+Check.That(solve1 10 "Day08_sample1.txt").IsEqualTo(40)
 solve1 1000 "Day08.txt"
+
+let solve2 input =
+    let sw = Stopwatch.StartNew()
+    let boxes = getInput input
+    printfn $"Input processing : {sw}"
+    let closestBoxes =
+        boxes
+        |> SeqEx.autoProduct
+        |> Seq.where (fun (a,b) -> a <> b)
+        |> Seq.map (fun (a,b) -> (a,b), Distance.euclidianDistance3D a b)
+        |> Seq.sortBy snd
+        |> Seq.map fst
+        |> Seq.toList
+    printfn $"Sorting by distance : {sw}"
+    let mutable circuits : List<System.Collections.Generic.HashSet<JunctionBox>> = List.Empty
+    
+    let rec buildCircuit remainingBoxes =
+        match remainingBoxes with
+        | [] -> failwith "Should not be empty"
+        | (ja, jb) :: tail ->
+            match circuits |> List.tryFind (fun c -> c.Contains(ja)), circuits |> List.tryFind (fun c -> c.Contains(jb)) with
+            | Some s, None -> s.Add(jb) |> ignore
+            | None, Some s -> s.Add(ja) |> ignore
+            | None, None ->
+                let s = new System.Collections.Generic.HashSet<JunctionBox>()
+                s.Add(ja) |> ignore
+                s.Add(jb) |> ignore
+                circuits <- s :: circuits
+            | Some sA, Some sB ->
+                if sA <> sB then
+                    sA.UnionWith(sB)
+                    circuits <- (circuits |> List.filter (fun x -> x <> sB))
+            if circuits.Length = 1 && circuits.Head.Count = boxes.Length then
+                let (x1,_,_) = ja
+                let (x2,_,_) = jb
+                x1 * x2
+            else
+                buildCircuit tail
+    
+    let result = buildCircuit closestBoxes 
+    printfn $"Building single circuit: {sw}"
+    result
+    
+Check.That(solve2 "Day08_sample1.txt").IsEqualTo(25272)
+
+solve2 "Day08.txt"
