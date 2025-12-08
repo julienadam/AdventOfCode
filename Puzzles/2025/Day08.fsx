@@ -56,11 +56,22 @@ let solve1 numBoxes input =
             s.Add(jb) |> ignore
             circuits <- s :: circuits
         | Some sA, Some sB ->
-            sA.UnionWith(sB)
-            circuits <- (circuits |> List.filter (fun x -> x <> sB))
-        circuits |> List.map (fun s -> s |> Seq.toArray) |> Dump |> ignore
+            if sA <> sB then
+                sA.UnionWith(sB)
+                circuits <- (circuits |> List.filter (fun x -> x <> sB))
+            else
+                ()
+        // circuits |> List.map (fun s -> s |> Seq.toArray) |> Dump |> ignore
         )
-    circuits |> List.map (fun s -> s |> Seq.toArray)
+    let bestCircuits =
+        circuits
+        |> List.sortByDescending (fun s -> s.Count)
+        |> List.take 3
+        |> List.map (fun s -> s.Count)
+        |> List.toArray
+        
+    bestCircuits[0] * bestCircuits[1] * bestCircuits[2] 
+    
     
 solve1 10 "Day08_sample1.txt"
 solve1 1000 "Day08.txt"
