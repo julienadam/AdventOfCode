@@ -4,7 +4,6 @@
 #load "../../Tools/Distance.fs"
 #r "nuget: NFluent"
 
-open System
 open System.Diagnostics
 open System.IO
 open AdventOfCode
@@ -25,7 +24,7 @@ let solve1 numBoxes input =
         boxes
         |> SeqEx.autoProduct
         |> Seq.where (fun (a,b) -> a <> b)
-        |> Seq.map (fun (a,b) -> (a,b), Distance.euclidianDistance3D a b)
+        |> Seq.map (fun (a,b) -> (a,b), euclidianDistance3D a b)
         |> Seq.sortBy snd
         |> Seq.take numBoxes
     
@@ -36,7 +35,7 @@ let solve1 numBoxes input =
         | Some s, None -> s.Add(jb) |> ignore
         | None, Some s -> s.Add(ja) |> ignore
         | None, None ->
-            let s = new System.Collections.Generic.HashSet<JunctionBox>()
+            let s = System.Collections.Generic.HashSet<JunctionBox>()
             s.Add(ja) |> ignore
             s.Add(jb) |> ignore
             circuits <- s :: circuits
@@ -61,40 +60,44 @@ let solve1 numBoxes input =
 Check.That(solve1 10 "Day08_sample1.txt").IsEqualTo(40)
 solve1 1000 "Day08.txt"
 
+open System.Collections.Generic
+
 let solve2 input =
     let sw = Stopwatch.StartNew()
     let boxes = getInput input
     printfn $"Input processing : {sw}"
+    sw.Restart()
     let closestBoxes =
         boxes
         |> SeqEx.autoProduct
         |> Seq.where (fun (a,b) -> a <> b)
-        |> Seq.map (fun (a,b) -> (a,b), Distance.euclidianDistance3D a b)
+        |> Seq.map (fun (a,b) -> (a,b), euclidianDistance3DSquared a b)
         |> Seq.sortBy snd
         |> Seq.map fst
         |> Seq.toList
     printfn $"Sorting by distance : {sw}"
-    let mutable circuits : List<System.Collections.Generic.HashSet<JunctionBox>> = List.Empty
+    sw.Restart()
+    let circuits = List<HashSet<JunctionBox>>()
     
     let rec buildCircuit remainingBoxes =
         match remainingBoxes with
         | [] -> failwith "Should not be empty"
         | (ja, jb) :: tail ->
-            match circuits |> List.tryFind (fun c -> c.Contains(ja)), circuits |> List.tryFind (fun c -> c.Contains(jb)) with
+            match circuits |> Seq.tryFind (fun c -> c.Contains(ja)), circuits |> Seq.tryFind (fun c -> c.Contains(jb)) with
             | Some s, None -> s.Add(jb) |> ignore
             | None, Some s -> s.Add(ja) |> ignore
             | None, None ->
-                let s = new System.Collections.Generic.HashSet<JunctionBox>()
+                let s = HashSet<JunctionBox>()
                 s.Add(ja) |> ignore
                 s.Add(jb) |> ignore
-                circuits <- s :: circuits
+                circuits.Add(s)
             | Some sA, Some sB ->
                 if sA <> sB then
                     sA.UnionWith(sB)
-                    circuits <- (circuits |> List.filter (fun x -> x <> sB))
-            if circuits.Length = 1 && circuits.Head.Count = boxes.Length then
-                let (x1,_,_) = ja
-                let (x2,_,_) = jb
+                    circuits.Remove(sB) |> ignore
+            if circuits.Count = 1 && circuits[0].Count = boxes.Length then
+                let x1,_,_ = ja
+                let x2,_,_ = jb
                 x1 * x2
             else
                 buildCircuit tail
