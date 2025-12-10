@@ -4,37 +4,37 @@ module Array2DTools =
 
     let tryGetUp row col (grid:'a[,]) =
         if row > 0 then
-            Some ((row - 1), col, grid.[(row - 1), col])
+            Some ((row - 1), col, grid[(row - 1), col])
         else
             None
 
     let tryGetDown row col (grid:'a[,]) =
         if row < ((grid |> Array2D.length1) - 1) then
-            Some ((row + 1), col, grid.[(row + 1), col])
+            Some ((row + 1), col, grid[(row + 1), col])
         else
             None
 
     let tryGetLeft row col (grid:'a[,]) =
         if col > 0 then
-            Some (row, (col - 1), grid.[row, (col - 1)])
+            Some (row, (col - 1), grid[row, (col - 1)])
         else
             None
 
     let tryGetRight row col (grid:'a[,]) =
         if col < ((grid |> Array2D.length2) - 1) then
-            Some (row, (col + 1), grid.[row, (col + 1)])
+            Some (row, (col + 1), grid[row, (col + 1)])
         else
             None
 
     let getAdjacent row col (grid:'a[,]) = seq {
         if row > 0 then
-            yield ((row - 1), col, grid.[(row - 1), col])
+            yield ((row - 1), col, grid[(row - 1), col])
         if row < ((grid |> Array2D.length1) - 1) then
-            yield ((row + 1), col, grid.[(row + 1), col])
+            yield ((row + 1), col, grid[(row + 1), col])
         if col > 0 then
-            yield (row, (col - 1), grid.[row, (col - 1)])
+            yield (row, (col - 1), grid[row, (col - 1)])
         if col < ((grid |> Array2D.length2) - 1) then
-            yield (row, (col + 1), grid.[row, (col + 1)])
+            yield (row, (col + 1), grid[row, (col + 1)])
     }
 
     let getAdjacentCoords row col rowLength colLength = seq {
@@ -48,7 +48,7 @@ module Array2DTools =
             yield (row, (col + 1))
     }
 
-    let getAdjacentCoordsDiagUp row col rowLength colLength = seq {
+    let getAdjacentCoordsDiagUp row col _ colLength = seq {
         if row > 0 && col > 0 then
            yield ((row - 1), (col - 1))
         if row > 0 then
@@ -57,7 +57,7 @@ module Array2DTools =
            yield ((row - 1), (col + 1))
     }
 
-    let getAdjacentCoordsDiagLeftRight row col rowLength colLength = seq {
+    let getAdjacentCoordsDiagLeftRight row col _ colLength = seq {
         if col > 0 then
             yield (row, (col - 1))
         if col < colLength - 1 then
@@ -90,25 +90,25 @@ module Array2DTools =
     
     let getAdjacentValues row col (grid:'a[,]) = seq {
         if row > 0 then
-            yield grid.[(row - 1), col]
+            yield grid[(row - 1), col]
         if row < ((grid |> Array2D.length1) - 1) then
-            yield grid.[(row + 1), col]
+            yield grid[(row + 1), col]
         if col > 0 then
-            yield grid.[row, (col - 1)]
+            yield grid[row, (col - 1)]
         if col < ((grid |> Array2D.length2) - 1) then
-            yield grid.[row, (col + 1)]
+            yield grid[row, (col + 1)]
     }
     
     let getAdjacentValuesWithDiagonal row col (grid:'a[,]) = seq {
         yield! getAdjacentValues row col grid
         if row > 0 && col < ((grid |> Array2D.length2) - 1) then
-            yield grid.[(row - 1), (col + 1)]
+            yield grid[(row - 1), (col + 1)]
         if row <((grid |> Array2D.length1) - 1) && col > 0 then
-            yield grid.[(row + 1), (col - 1)]
+            yield grid[(row + 1), (col - 1)]
         if row <((grid |> Array2D.length1) - 1) && col < ((grid |> Array2D.length2) - 1) then
-            yield grid.[(row + 1), (col + 1)]
+            yield grid[(row + 1), (col + 1)]
         if row > 0 && col > 0 then
-            yield grid.[(row - 1), (col - 1)]
+            yield grid[(row - 1), (col - 1)]
     }
     
     // MISSING A DIAGONAL !
@@ -125,50 +125,50 @@ module Array2DTools =
     let enumArray2d (array:'a[,]) = seq {
         for i = 0 to (array |> Array2D.length1) - 1 do
             for j = 0 to (array |> Array2D.length2) - 1 do
-                yield i,j, array.[i,j]
+                yield i,j, array[i,j]
     }
 
-    let filteri (filter:(int -> int -> 'a -> bool)) (grid:'a[,]) = seq {
-        for r = 0 to (grid |> Array2D.length1) - 1 do
-            for c = 0 to (grid |> Array2D.length2) - 1 do
-                let v = grid.[r,c]
-                if filter r c v then
-                    yield r,c, v
-    }
+    let filteri (filter: int -> int -> 'a -> bool) (grid:'a[,]) = seq {
+                                                                      for r = 0 to (grid |> Array2D.length1) - 1 do
+                                                                          for c = 0 to (grid |> Array2D.length2) - 1 do
+                                                                              let v = grid[r,c]
+                                                                              if filter r c v then
+                                                                                  yield r,c, v
+                                                                  }
 
-    let countWhere (filter:(int -> int -> 'a -> bool)) (grid:'a[,]) =
+    let countWhere (filter: int -> int -> 'a -> bool) (grid:'a[,]) =
         let mutable count = 0
         for r = 0 to (grid |> Array2D.length1) - 1 do
             for c = 0 to (grid |> Array2D.length2) - 1 do
-                let v = grid.[r,c]
+                let v = grid[r,c]
                 if filter r c v then
                     count <- count + 1
         count
     
     
-    let findi (filter:(int -> int -> 'a -> bool)) (grid:'a[,]) = 
+    let findi (filter: int -> int -> 'a -> bool) (grid:'a[,]) = 
         grid |> filteri filter |> Seq.head
 
-    let tryFindi (filter:(int -> int -> 'a -> bool)) (grid:'a[,]) = 
+    let tryFindi (filter: int -> int -> 'a -> bool) (grid:'a[,]) = 
         grid |> filteri filter |> Seq.tryHead
 
     let printGrid (grid:'a[,]) =
         for i in [0..grid.GetLength(0) - 1] do
             for j in [0..grid.GetLength(1) - 1] do
-                printf $"{grid.[i,j]}"
+                printf $"{grid[i,j]}"
             printfn ""
     
     let printGridCustom dataToChar (grid:'a[,]) =
         for i in [0..grid.GetLength(0) - 1] do
             for j in [0..grid.GetLength(1) - 1] do
-                printf $"%c{dataToChar grid.[i,j]}"
+                printf $"%c{dataToChar grid[i,j]}"
             printfn ""
         grid
 
     let printGridCustom2 dataToChar (grid:'a[,]) =
         for i in [0..grid.GetLength(0) - 1] do
             for j in [0..grid.GetLength(1) - 1] do
-                printf $"%c{dataToChar grid.[i,j] i j}"
+                printf $"%c{dataToChar grid[i,j] i j}"
             printfn ""
         grid
 
