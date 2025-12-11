@@ -1,12 +1,14 @@
 #time "on"
 #load "../../Tools.fs"
 #load "../../Tools/MathEx.fs"
+#load "../../Tools/SeqEx.fs"
 #r "nuget: NFluent"
 #r "nuget: FSharp.Collections.ParallelSeq"
 
 open System
 open System.Diagnostics
 open System.IO
+open System.Linq
 open AdventOfCode
 open Checked
 open NFluent
@@ -97,64 +99,95 @@ let solve1 input =
     |> Seq.sum
 
 Check.That(solve1 "Day10_sample1.txt").IsEqualTo(7)
-solve1 "Day10.txt"
-
+// solve1 "Day10.txt"
 
 type Machine2 = {
-    expectedJoltages: int64
-    buttons: int64 array
+    numCounters: int
+    expectedJoltages: int array
+    buttons: int array array
 }
 
-let buildButtonSet numCounters (buttons:int array) =
-    buttons
-    |> Seq.map (fun b ->
-        if b > numCounters - 1 then failwithf $"Invalid button number {b}"
-        MathEx.pow10 (numCounters - b - 1)
-    )
-    |> Seq.sum
-   
-Check.That(buildButtonSet  3 [|1;2|]).IsEqualTo(11L)
-Check.That(buildButtonSet 3 [|0;1;2|]).IsEqualTo(111L)
-Check.That(buildButtonSet 3 [|0;1|]).IsEqualTo(110L)
-
-let parseButtons2 (input: string array) n =
-    input
-    |> Array.map (fun x ->
-        x.Substring(1,x.Length - 2)
-        |> splitIntList
-        |> buildButtonSet n)
-    
 let parseMachine2 l =
     let split = ssplit " " l
     let joltages = split[split.Length - 1]
     let n = joltages.Substring(1, joltages.Length - 2) |> splitIntList |> Seq.length
-    let buttons = parseButtons2 split[1..split.Length-2] n
     {
-        expectedJoltages = joltages.Substring(1, joltages.Length - 2).Replace(",", "") |> int64
-        buttons = buttons
+        numCounters = n
+        expectedJoltages = joltages.Substring(1, joltages.Length - 2) |> splitIntList
+        buttons = split[1..split.Length-2] |> Array.map (fun s -> s.Substring(1,s.Length - 2) |> splitIntList)
     }
     
-parseMachine2 "[.##.] (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}"
+let getInput2 name =
+    File.ReadLines(getInputPath2025 name)
+    |> Seq.map parseMachine2
 
-let rec isOverJolted (current:int64) (target:int64) n=
-    // printfn $"Checking {current} vs {target}"
-    if n = 0 then
-        false
-    else
-        let p = MathEx.pow10 n
-        if current % p > target % p then
-            true
-        else
-            isOverJolted (current % p) (target % p) (n - 1) 
+#r "nuget: Microsoft.Z3"
+#load "../../Tools/Z3/Theory.fs"
+#load "../../Tools/Z3/Bool.fs"
+#load "../../Tools/Z3/Int.fs"
 
-Check.That(isOverJolted 3000 2000 4).IsEqualTo(true)
-Check.That(isOverJolted 2000 3000 4).IsEqualTo(false)
-Check.That(isOverJolted 3334 3334 4).IsEqualTo(false)
-Check.That(isOverJolted 3335 3334 4).IsEqualTo(true)
-Check.That(isOverJolted 3301 3400 4).IsEqualTo(true)
+open Microsoft.Z3.Bool
+open Microsoft.Z3.Int
+open Microsoft.Z3
 
-let monkey2 (machine:Machine2) =
-    let rec monkeyRec counters =
-        ()
-        
+let solveMachine2 (machine:Machine2) =
+    let rec solveMachineRec (best:bigint)=
+        let buttonVariables =
+            machine.buttons
+            |> Seq.mapi (fun i b -> b, Int($"b{i}"))
             
+        let allButtonsArePositive =
+            buttonVariables
+            |> Seq.map (fun (_, x) -> x >=. (bigint 0))
+            |> Seq.toArray
+        
+        let getButtonsConnectedTo joltageIndex =
+            buttonVariables
+            |> Seq.map (fun (b,var) -> if b |> Array.contains joltageIndex then Some var else None)
+            |> Seq.choose id
+            |> Seq.toArray
+          
+        let buildEquation (ints:Int array) (expected:bigint) =
+            (ints |> Seq.reduce (fun s1 s2 -> s1 + s2)) =. expected
+          
+        let sumOfPressesMustMatchCounters =
+            machine.expectedJoltages
+            |> Array.mapi (fun index joltage ->
+                let connectedButtons = getButtonsConnectedTo index
+                buildEquation connectedButtons (bigint joltage)  
+            ) 
+        
+        let optimizeBest =
+             (buttonVariables |> Seq.map snd |> Seq.reduce (fun s1 s2 -> s1 + s2)) <. best
+        
+        let equations = Array.concat [sumOfPressesMustMatchCounters; allButtonsArePositive; [|optimizeBest|]]
+        
+        match Z3.SolveResults(equations) with
+        | NoSolution -> best
+        | Unknown -> failwithf "no solution found"
+        | Solution s -> 
+            let presses =
+                s |> Seq.map (fun (symbol, func, res) -> 
+                    match res with 
+                    | Const x -> (x :?> IntNum).Int
+                    | _ -> failwithf "Not supported"
+                )
+                |> Seq.sum
+
+            solveMachineRec (bigint presses)
+    solveMachineRec (bigint Int64.MaxValue)
+
+(parseMachine2 "[.##.] (3) (1,3) (2) (2,3) (0,2) (0,1) {3,5,4,7}") |> solveMachine2
+
+let solve2 input =
+    getInput2 input
+    |> Seq.mapi (fun index machine ->
+        let sw = Stopwatch.StartNew()
+        let result = solveMachine2 machine
+        printfn $"Solved machine {index} in {sw.Elapsed}"
+        result
+        )
+    |> Seq.sum
+
+Check.That(solve2 "Day10_sample1.txt").IsEqualTo(bigint 33)
+solve2 "Day10.txt"
