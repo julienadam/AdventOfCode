@@ -181,10 +181,10 @@ let solveMachine2 (machine:Machine2) =
 
 let solve2 input =
     getInput2 input
-    |> Seq.mapi (fun index machine ->
+    |> PSeq.mapi (fun index machine ->
         let sw = Stopwatch.StartNew()
         let result = solveMachine2 machine
-        printfn $"Solved machine {index} in {sw.Elapsed}"
+        //printfn $"Solved machine {index} in {sw.Elapsed}"
         result
         )
     |> Seq.sum

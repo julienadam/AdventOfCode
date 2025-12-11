@@ -1,6 +1,8 @@
 [<AutoOpen>]
 module Microsoft.Z3.Api
 
+open System
+open System.Threading
 open Microsoft.Z3
 
 module Context =
@@ -16,8 +18,8 @@ module Context =
 
 /// Globals / global state
 module Gs =
-  let mutable private globalCtx = Context.create ()
-  let context () = globalCtx
+  let mutable private globalCtx = new ThreadLocal<Context>(fun _ -> Context.create ())
+  let context () = globalCtx.Value
 
 let inline (++) xs ys = Array.append xs ys
 
