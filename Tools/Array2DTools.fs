@@ -148,7 +148,10 @@ module Array2DTools =
     
     let findi (filter: int -> int -> 'a -> bool) (grid:'a[,]) = 
         grid |> filteri filter |> Seq.head
-
+    //
+    // let iteri (filter: int -> int -> 'a -> bool) (grid:'a[,]) = 
+    //     grid |> filteri filter |> Seq.head
+    //
     let tryFindi (filter: int -> int -> 'a -> bool) (grid:'a[,]) = 
         grid |> filteri filter |> Seq.tryHead
 
@@ -177,4 +180,13 @@ module Array2DTools =
     let inline maxR grid = (lenR grid) - 1
     let inline maxC grid = (lenC grid) - 1
     let inline transpose grid = Array2D.init (grid |> lenC) (grid |> lenR) (fun r c -> grid[c,r])
+    
+    let inline rotate (grid:'a[,]) =
+        let target = Array2D.zeroCreate<'a> (grid |> Array2D.length2) (grid |> Array2D.length1)
+        grid |> Array2D.iteri (fun i j v -> target[j, (grid |> Array2D.length2) - i - 1] <- v)
+        target
+
+    let inline flipV grid =
+        Array2D.init<'a> (grid |> Array2D.length1) (grid |> Array2D.length2) (fun r c -> grid[r, (grid |> Array2D.length1) - c - 1])
+        
     let isInBounds r c grid = r >= 0 && r <= (maxR grid) && c >= 0 && c <= (maxC grid)
